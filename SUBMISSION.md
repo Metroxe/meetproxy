@@ -25,7 +25,7 @@ Demo story: Biscuit Bakery's billing agent invoices Corgi Cafe for this morning'
 **Sponsor integrations:**
 - Agent37 Cloud (required): both support agents run on a Hermes instance created with the Agent37 Hosting API. We stage the repo, a write-scoped deploy key and read-only Grafana access over the exec API; each agent is its own session driven through `POST /v1/responses`; the instance is the sandbox where the fix is reproduced and verified before it ships.
 - Supabase: the support desk's database (rooms, messages, incidents, tickets) runs on Supabase Postgres.
-- OpenAI: after each incident, an OpenAI model (through Agent37's model router) writes the customer-facing postmortem shown in the room.
+- OpenAI: the support engineer agent thinks with OpenAI gpt-5.6-luna (selected per turn on Agent37), and OpenAI gpt-5.4-mini writes the incident summary and customer-facing postmortem in every room. Both run through Agent37's model router.
 
 **Links:**
 - Live demo: https://corgipay.boilerroom.tech (CorgiPay dashboard), https://corgipay.boilerroom.tech/support (support rooms), https://logs.boilerroom.tech (Grafana)
@@ -47,7 +47,7 @@ Sponsor rule: Agent37 is named out loud at least 3 times and its logo is on scre
 | 0:57-1:12 | Room: sandbox dev server, reproduced, fix verified (sped up, label "4x") | "In its Agent37 sandbox it clones the repo, reproduces the bug on a dev server, and proves the fix." |
 | 1:12-1:22 | CorgiPay Release (Agent37) reviews, merges; status rail hits "Deployed"; GitHub commit by the agent | "A second Agent37 agent reviews and ships it to production." |
 | 1:22-1:32 | Claude Code retries: 201. Invoice slides into the dashboard | "The customer's agent retries. Done. A ticket that takes days took two and a half minutes." |
-| 1:32-1:40 | OpenAI postmortem card; Supabase badge on the room / admin page | "OpenAI writes the postmortem, and every incident is stored in Supabase." |
+| 1:32-1:40 | OpenAI postmortem card; Supabase badge on the room / admin page | "The support engineer runs on OpenAI's Luna model, OpenAI writes the postmortem, and every incident is stored in Supabase." |
 | 1:40-1:45 | End card: repo links + "Agent37 · Supabase · OpenAI" | "MeetProxy. One error, one fix, in production." |
 
 Before each take: `scripts/reset-demo.sh` (puts the bug back), then hard-refresh the dashboard.
