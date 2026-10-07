@@ -138,3 +138,15 @@ details.req pre{font:12px/1.45 var(--mono);background:var(--code);border-radius:
 .b.long{cursor:pointer;max-height:7.2em;overflow:hidden;-webkit-mask-image:linear-gradient(180deg,#000 55%,transparent);mask-image:linear-gradient(180deg,#000 55%,transparent)}
 .b.long.open{max-height:none;-webkit-mask-image:none;mask-image:none}
 .b.long.tail:before,.b.long.tail:after{display:none}
+/* pinned incident card at the top of the chat */
+#pin{padding:14px 22px 0}
+.pin{display:flex;align-items:center;gap:16px;padding:14px 16px;border-radius:16px;border:1px solid color-mix(in srgb,var(--bug) 35%,var(--hair));background:color-mix(in srgb,var(--bug) 6%,var(--imbg))}
+.pin.resolved{border-color:color-mix(in srgb,var(--ok) 40%,var(--hair));background:color-mix(in srgb,var(--ok) 7%,var(--imbg))}
+.pin .pl{flex:1;min-width:0}
+.pin .kick{font:700 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--bug);display:flex;gap:8px;align-items:center}
+.pin.resolved .kick{color:var(--ok)}.pin .kick code{text-transform:none;letter-spacing:0;font-size:11px;color:var(--sub)}
+.pin .okd{width:14px;height:14px;border-radius:50%;background:var(--ok);color:#fff;font-size:9px;display:inline-flex;align-items:center;justify-content:center}
+.pin h3{margin:5px 0 3px;font:650 17px -apple-system,system-ui,sans-serif;letter-spacing:-.01em}
+.pin .sev{font:700 11px var(--mono);border-radius:6px;padding:2px 7px;background:var(--bug-soft);color:var(--bug);margin-right:8px;vertical-align:2px}
+.pin .pm2{font-size:12.5px;color:var(--sub)}
+.pin a.go{font:700 13px -apple-system,system-ui,sans-serif;color:#fff;background:#f46800;border-radius:999px;padding:8px 14px;text-decoration:none;white-space:nowrap}

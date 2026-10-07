@@ -76,10 +76,25 @@ function sysCard(m, pop) {
   return null
 }
 
+const PINNED = (x) => x.type === 'incident' || x.type === 'logs' || (x.type === 'ai' && x.kind !== 'postmortem') || (x.type === 'status' && x.stage === 'investigating')
+function pin() {
+  let el = document.getElementById('pin')
+  if (!el) { el = document.createElement('div'); el.id = 'pin'; st.parentNode.insertBefore(el, st) }
+  const f = (t) => (msgs.find((m) => (m.meta || {}).type === t) || {}).meta
+  const inc = f('incident'), lg = f('logs'), ai = msgs.map((m) => m.meta || {}).find((x) => x.type === 'ai' && x.kind !== 'postmortem')
+  if (!inc && !ai) { el.innerHTML = ''; return }
+  const st2 = (ticket || {}).status || 'open', ok = st2 === 'resolved'
+  const rid = (inc && inc.request_id) || (lg && lg.request_id) || ''
+  el.innerHTML = '<div class="pin ' + E(st2) + '"><div class="pl"><div class="kick">' + (ok ? '<span class="okd">✓</span>Resolved' : '<span class="pulse"></span>' + E(D.api) + ' · HTTP 500') + (rid ? ' <code>' + E(rid) + '</code>' : '') + '</div>' +
+    '<h3>' + (ai && ai.severity ? '<span class="sev">' + E(ai.severity) + '</span>' : '') + E((ai && ai.title) || ((inc && inc.endpoint) || 'Request') + ' failed') + '</h3>' +
+    '<div class="pm2">' + (inc ? E(inc.endpoint) + ' · ' : '') + (ai ? 'Summary by OpenAI ' + E(String(ai.model || '').replace(/^openai\//, '')) : 'The customer\'s agent only saw a generic 500') + '</div></div>' +
+    (lg ? '<a class="go" href="' + E(lg.url) + '" target="_blank" rel="noopener">Logs in Grafana ↗</a>' : '') + '</div>'
+}
 function render() {
   let h = '', prev = null, prevT = 0
   const items = []
   for (const m of msgs) {
+    if (PINNED(m.meta || {})) continue
     const sys = sysCard(m, m.n > shownN && shownN >= 0)
     if (sys !== null) { items.push({ sys, m }); continue }
     const body = m.body.replace(MARK, '').trim()
@@ -119,7 +134,7 @@ function render() {
     }
   }
   const atEnd = innerHeight + scrollY >= document.body.scrollHeight - 220
-  st.innerHTML = h; header()
+  st.innerHTML = h; header(); pin()
   shownN = msgs.length ? msgs[msgs.length - 1].n : 0
   if (atEnd && msgs.length > 1) scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
 }
