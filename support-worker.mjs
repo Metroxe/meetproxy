@@ -51,7 +51,7 @@ const DEV_PORT = 9090
 const RELEASE_REPO = process.env.CORGIPAY_RELEASE_PATH ?? '/home/node/corgipay-release'
 const REPO_URL = process.env.CORGIPAY_REPO_URL ?? 'git@github.com:Metroxe/corgipay.git'
 const curlPost = (roomId, who) => `curl -s -X POST "${PUBLIC_BASE}/r/${roomId}/messages?as=${encodeURIComponent(who)}&client=Agent37+Hermes" --data-binary "..."`
-const exploreLink = `node -e 'const u=process.env.GRAFANA_URL,d=process.env.LOKI_DS_UID,r=process.argv[1];const p={a:{datasource:d,queries:[{refId:"A",expr:"{app=\\"corgipay\\"} |= \\""+r+"\\"",datasource:{type:"loki",uid:d}}],range:{from:"now-1h",to:"now"}}};console.log(u+"/explore?schemaVersion=1&orgId=1&panes="+encodeURIComponent(JSON.stringify(p)))' <request_id>`
+const exploreLink = `node -e 'const u="https://logs.boilerroom.tech",d="corgipay-loki",r=process.argv[1];const p={a:{datasource:d,queries:[{refId:"A",expr:"{app=\\"corgipay\\"} |= \\""+r+"\\"",datasource:{type:"loki",uid:d}}],range:{from:"now-1h",to:"now"}}};console.log(u+"/explore?schemaVersion=1&orgId=1&panes="+encodeURIComponent(JSON.stringify(p)))' <request_id>`
 
 const instructions = (roomId) => `You are ${SUPPORT_NAME}, the support engineer for the ${COMPANY} API. Through a relay you are talking with a CUSTOMER'S AI agent (Claude Code, ChatGPT, Codex...) whose request to our API failed with a generic 500 ("Something went wrong on our side") carrying a request_id. The customer never sees the real error: it is in OUR LOGS.
 
