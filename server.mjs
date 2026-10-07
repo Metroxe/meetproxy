@@ -85,6 +85,7 @@ create table if not exists tickets (
   updated_at timestamptz not null default now()
 );
 alter table tickets add column if not exists ai_title text;
+alter table rooms add column if not exists typing text;
 alter table tickets add column if not exists severity text;
 alter table tickets add column if not exists postmortem text;
 alter table tickets add column if not exists postmortem_model text;
@@ -404,60 +405,23 @@ async function homePage() {
   return page(`${COMPANY} Support`, body, `f.addEventListener('submit',()=>{go.disabled=true;go.textContent='Opening a room…'})`)
 }
 
+const GRAFANA_EXPLORE = process.env.GRAFANA_EXPLORE ?? 'https://logs.boilerroom.tech/explore?schemaVersion=1&orgId=1&panes=%7B%22a%22%3A%7B%22datasource%22%3A%22corgipay-loki%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22expr%22%3A%22%7Bapp%3D%5C%22corgipay%5C%22%7D%20%7C%3D%20%5C%22REQ_ID%5C%22%20%7C%20json%22%2C%22queryType%22%3A%22range%22%2C%22datasource%22%3A%7B%22type%22%3A%22loki%22%2C%22uid%22%3A%22corgipay-loki%22%7D%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-6h%22%2C%22to%22%3A%22now%22%7D%7D%7D'
+const STATIC = { '/room.js': 'text/javascript', '/room.css': 'text/css', '/brand/agent37-logo.png': 'image/png', '/brand/agent37-favicon.ico': 'image/x-icon' }
+
 async function roomPage(req, room, key) {
-  const [rows, people, ticket] = await Promise.all([readMessages(room.id, 0), readPeople(room.id),
-    pool.query('select summary, status from tickets where room_id=$1', [room.id]).then((r) => r.rows[0] ?? null)])
+  const [rows, people, ticket, typing] = await Promise.all([readMessages(room.id, 0), readPeople(room.id),
+    pool.query('select summary, status from tickets where room_id=$1', [room.id]).then((r) => r.rows[0] ?? null),
+    pool.query('select typing from rooms where id=$1', [room.id]).then((r) => r.rows[0]?.typing ?? null)])
   const prompt = joinPrompt(baseOf(req), room, room.visibility === 'password' || room.visibility === 'private' ? key : null)
-  const data = JSON.stringify({ id: room.id, support: SUPPORT_NAME, release: RELEASE_NAME, api: `${COMPANY} API`, instance: process.env.AGENT37_INSTANCE ?? '', messages: rows, people, ticket }).replace(/</g, '\\u003c')
-  const body = `<div class="roomhd"><div class="eyebrow">Live support room</div><h2>${esc(room.goal || 'Support')}</h2>
-<div class="vs" id="vs"></div></div>
-<ol class="rail" id="rail"></ol><div id="banner"></div>
+  const data = JSON.stringify({ id: room.id, base: BP, support: SUPPORT_NAME, release: RELEASE_NAME, api: `${COMPANY} API`, instance: process.env.AGENT37_INSTANCE ?? '', messages: rows, people, ticket, typing }).replace(/</g, '\\u003c')
+  const body = `<link rel="stylesheet" href="${BP}/room.css"><div class="room"><section class="chat"><div class="chathd"><div class="avs" id="avs"></div><div class="who" id="who"></div><div class="goal">${esc(room.goal || 'Support')}</div></div>
+<div class="im" id="stream"></div></section>
+<aside class="side"><div class="railhd">Incident status</div><ol class="rail" id="rail"></ol><div id="banner"></div>
 <details class="paste panel" id="paste"><summary>Prompt for the customer's agent</summary><pre class="prompt" id="joinp">${esc(prompt)}</pre>
 <button type="button" class="btn sm" onclick="const b=this;navigator.clipboard.writeText(document.getElementById('joinp').innerText).then(()=>{b.textContent='Copied ✓';setTimeout(()=>b.textContent='Copy prompt',1500)})">Copy prompt</button>
-<span class="note">&nbsp;Agents that hit a ${esc(COMPANY)} 500 get this link in the error body. No MCP, no SDK: plain curl.</span></details>
-<div class="stream" id="stream"></div><div class="foot">Names, apps and models are self-declared by each agent. Never paste API keys into a support room.</div>`
-  const script = `const D=${data};
-const E=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
-const st=document.getElementById('stream');let last=0,msgs=[],ticket=D.ticket;const people={};for(const p of D.people)people[p.name]=p;
-const tm=d=>new Date(d).toLocaleTimeString([],{hour:'numeric',minute:'2-digit',second:'2-digit'});
-const isS=m=>m.sender===D.support||m.sender===D.release,isApi=m=>m.meta&&m.meta.type==='incident';
-function md(t){const parts=String(t).split(/\`\`\`/);return parts.map((p,i)=>{if(i%2){const nl=p.indexOf('\\n');const head=nl>=0?p.slice(0,nl).trim():'';const code=nl>=0?p.slice(nl+1):p;const fn=/[\\/.:]/.test(head)?'<span class="fn">'+E(head)+'</span>':'';return '<pre>'+fn+E(code.replace(/\\n$/,''))+'</pre>'}
- return p.trim()?p.trim().split(/\\n{2,}/).map(x=>'<p>'+E(x).replace(/\`([^\`\\n]+)\`/g,'<code>$1</code>').replace(/\\*\\*([^*\\n]+)\\*\\*/g,'<b>$1</b>').replace(/(https?:\\/\\/[^\\s<]+)/g,u=>'<a href="'+u+'" target="_blank" rel="noopener">'+(u.includes('/explore')?'Open in Grafana Explore':u)+'</a>')+'</p>').join(''):''}).join('')}
-const MARK=/^\\s*(LOGS|REPRODUCED|VERIFIED|PATCH|MERGED|REJECTED|FIXED|DEPLOYED|RESOLVED|ESCALATE|COMMITTED):\\s*(.+)$/gim;
-function stages(){const S={};const set=(k,m,d)=>{if(!S[k])S[k]={at:m.created_at,d:d||''}};const MK={LOGS:'logs',REPRODUCED:'reproduced',VERIFIED:'verified',MERGED:'review'};
- for(const m of msgs){const x=m.meta||{};if(x.type==='incident')set('reported',m,x.request_id);
-  if(x.type==='status')set(x.stage,m,x.detail);
-  if(isS(m)&&!['status','ai','ticket'].includes(x.type)){for(const mm of m.body.matchAll(MARK)){const t=mm[1].toUpperCase();const sh=(mm[2].match(/\\b[0-9a-f]{7,40}\\b/)||[])[0];if(MK[t])set(MK[t],m,t==='MERGED'&&sh?sh.slice(0,7):'');if(t==='DEPLOYED')set('review',m,sh?sh.slice(0,7):'')}}}
- if(!S.reported&&msgs.length)S.reported={at:msgs[0].created_at,d:''};return S}
-const STEPS=[['reported','Incident opened'],['logs','Logs found (Grafana)'],['reproduced','Reproduced in sandbox'],['verified','Fix verified on dev server'],['review','Release review'],['deployed','Deployed to prod'],['retried','Customer retried (200)']];
-function rail(){const S=stages();let cur=STEPS.findIndex(s=>!S[s[0]]);if(cur<0)cur=STEPS.length;
- document.getElementById('rail').innerHTML=STEPS.map(([k,l],i)=>'<li class="'+(S[k]?'done':i===cur?'now':'')+'"><span class="b">'+(S[k]?'✓':i+1)+'</span><span class="l">'+l+(S[k]&&S[k].d?' <code>'+E(S[k].d)+'</code>':'')+'</span><span class="t">'+(S[k]?tm(S[k].at):i===cur?'in progress…':'')+'</span></li>').join('');return cur}
-function header(){const cust=Object.values(people).find(p=>p.name!==D.support&&p.name!==D.api&&p.kind==='agent');
- const c=cust?'<span class="chip c"><span class="av">'+E(cust.name[0].toUpperCase())+'</span>'+E(cust.name)+' <small>'+E([cust.client,cust.model].filter(Boolean).join(' · ')||'agent')+(cust.human?' · for '+E(cust.human):'')+'</small></span>':'<span class="chip c"><span class="av">?</span>Customer\\'s agent <small>joining…</small></span>';
- document.getElementById('vs').innerHTML=c+'<span class="x">⇄</span><span class="chip s"><span class="av">S</span>'+E(D.support)+' <small>fixer'+(D.instance?' · '+E(D.instance):'')+'</small></span>'+(msgs.some(m=>m.sender===D.release)?'<span class="chip s r"><span class="av">R</span>'+E(D.release)+' <small>review + ship</small></span>':'');
- const t=ticket||{status:'open',summary:''};
- document.getElementById('banner').innerHTML=t.status==='open'?'':'<div class="banner '+E(t.status)+'"><span class="tag">Ticket '+E(t.status)+'</span>'+(t.status==='resolved'?'✓ '+E(t.summary):'Escalated to a human: '+E(t.summary))+'</div>'}
-function render(){let h='';
- for(const m of msgs){const x=m.meta||{};
-  if(x.type==='incident'){h+='<div class="card incident"><div class="kick">● ${esc(COMPANY)} API · HTTP 500 · '+E(x.request_id)+'</div><h3>'+E(x.endpoint)+': Something went wrong on our side</h3><div class="note">The customer only saw a generic 500 with request_id <code>'+E(x.request_id)+'</code>. The real error is in our logs.</div><div class="txt">'+md('\`\`\`request (sanitized)\\n'+JSON.stringify(x.request||{},null,2)+'\\n\`\`\`')+'</div><div class="note">API build <code>'+E((x.api_sha||'').slice(0,7))+'</code> · support room opened automatically from the error response</div></div>';continue}
-  if(x.type==='status'){h+='<div class="sys">'+tm(m.created_at)+' · '+E(m.body)+'</div>';continue}
-  if(x.type==='ai'){const lbl=(x.kind==='postmortem'?'Postmortem':'Incident summary')+' · OpenAI '+E(String(x.model||'').replace(/^openai\//,''));h+='<div class="card ai"><div class="kick">◆ '+lbl+'</div>'+(x.kind==='postmortem'?'<div class="pm">'+E(m.body)+'</div>':'<h3><span class="sev">'+E(x.severity)+'</span>'+E(x.title)+'</h3>'+(x.why?'<div class="note">'+E(x.why)+'</div>':''))+'</div>';continue}
-  if(x.type==='ticket'){h+='<div class="card ticket '+E(x.status)+'"><div class="kick">'+(x.status==='resolved'?'✓ Ticket resolved':'⚑ Escalated to a human')+'</div><h3>'+E(x.summary)+'</h3></div>';continue}
-  if(m.sender_kind==='human'){h+='<div class="human"><b>'+E(m.sender)+'</b>: '+E(m.body)+'</div>';continue}
-  const s=isS(m),k=s?(m.sender===D.release?'s r':'s'):'c',p=people[m.sender]||{};let flags='';
-  const body=m.body.replace(MARK,(_,t,v)=>{t=t.toUpperCase();const cls=t==='ESCALATE'||t==='REJECTED'?'esc':t==='RESOLVED'||t==='VERIFIED'?'ok':t==='REPRODUCED'?'bug':'ship';flags+='<span class="flag '+cls+'">'+({LOGS:'▤ LOGS',REPRODUCED:'✗ REPRODUCED',VERIFIED:'✓ VERIFIED',PATCH:'⎇ PATCH',MERGED:'⎇ MERGED',REJECTED:'⚑ REJECTED',FIXED:'⎇ FIXED',COMMITTED:'⎇ COMMITTED',DEPLOYED:'🚀 DEPLOYED',RESOLVED:'✓ RESOLVED',ESCALATE:'⚑ ESCALATE'})[t]+': '+E(v)+'</span>';return ''});
-  const badge=s?'<span class="badge a37">Agent37'+(x.instance||D.instance?' · '+E(x.instance||D.instance):'')+'</span>'+((x.model||p.model)?'<span class="badge">'+E(x.model||p.model)+'</span>':''):'<span class="badge">'+E([p.client,p.model].filter(Boolean).join(' · ')||'agent')+'</span>';
-  h+='<div class="msg '+k+'"><span class="av">'+E((m.sender[0]||'?').toUpperCase())+'</span><div style="min-width:0"><div class="meta"><b>'+E(m.sender)+'</b>'+badge+'<span class="time">'+tm(m.created_at)+'</span></div><div class="bub"><div class="txt">'+md(body.trim())+'</div>'+(flags?'<div class="flags">'+flags+'</div>':'')+'</div></div></div>'}
- const cur=rail();const lastM=msgs[msgs.length-1];const t=ticket||{};
- if(lastM&&!isS(lastM)&&t.status!=='resolved'&&!(lastM.meta&&['status','ticket','ai'].includes(lastM.meta.type)))h+='<div class="typing"><span><i></i><i></i><i></i></span>'+E(D.support)+(cur<=1?' is reproducing the bug…':' is on it…')+'</div>';
- const atEnd=innerHeight+scrollY>=document.body.scrollHeight-200;st.innerHTML=h;header();
- const cust=msgs.some(m=>!isS(m)&&!isApi(m));const pd=document.getElementById('paste');if(!pd.dataset.touched)pd.open=false;
- if(atEnd&&msgs.length>1)scrollTo({top:document.body.scrollHeight,behavior:'smooth'})}
-document.getElementById('paste').addEventListener('toggle',e=>{e.target.dataset.touched=1});
-function add(j){for(const p of j.people||[])people[p.name]=p;if(j.ticket)ticket=j.ticket;for(const m of j.messages){if(m.n>last){msgs.push(m);last=m.n;if(m.meta&&m.meta.type==='ticket')ticket={status:m.meta.status,summary:m.meta.summary}}}render()}
-async function poll(){for(;;){try{const r=await fetch(location.pathname+'/messages?format=json&wait=25&after='+last);if(r.ok)add(await r.json());else await new Promise(r=>setTimeout(r,1500))}catch(e){await new Promise(r=>setTimeout(r,1500))}}}
-add(D);poll()`
-  return page(`${COMPANY} Support · live`, body, script)
+<div class="note">Agents that hit a ${esc(COMPANY)} 500 get this link in the error body. No MCP, no SDK: plain curl.</div></details>
+<div class="note">Names, apps and models are self-declared by each agent. Never paste API keys into a support room.</div></aside></div>`
+  return page(`${COMPANY} Support · live`, body, `const D=${data};</script><script src="${BP}/room.js">`)
 }
 
 async function adminPage() {
@@ -520,6 +484,7 @@ async function handle(req, res) {
     await pool.query('select 1')
     return reply(200, 'ok\n')
   }
+  if (req.method === 'GET' && STATIC[url.pathname]) { res.writeHead(200, { 'content-type': STATIC[url.pathname], 'cache-control': 'no-cache' }); return res.end(readFileSync(path.join(HERE, 'public', url.pathname))) }
   if (req.method === 'GET' && url.pathname === '/') return html(200, await homePage())
   if (req.method === 'GET' && url.pathname === '/admin') return html(200, await adminPage())
   if (req.method === 'POST' && url.pathname === '/help') {
@@ -549,6 +514,8 @@ async function handle(req, res) {
     await postMessage(room, { name: `${COMPANY} API`, kind: 'agent', client: `${COMPANY} API`, model: String(f.api_sha ?? '').slice(0, 7), human: COMPANY },
       `Unhandled error on ${endpoint}\nrequest_id: ${requestId}\nThe customer got a generic 500 ("Something went wrong on our side"). The real error is in our logs (Grafana/Loki, {app="corgipay"} |= "${requestId}").\n\nRequest (sanitized):\n\`\`\`json\n${reqJson}\n\`\`\``,
       { type: 'incident', request_id: requestId, endpoint, error, request: f.request ?? null, api_sha: f.api_sha ?? null })
+    if (requestId) await postMessage(room, { name: `${COMPANY} Logs`, kind: 'agent', client: 'Grafana Loki', model: '', human: COMPANY },
+      `Logs for ${requestId}: ${GRAFANA_EXPLORE.replace('REQ_ID', encodeURIComponent(requestId))}`, { type: 'logs', request_id: requestId, url: GRAFANA_EXPLORE.replace('REQ_ID', encodeURIComponent(requestId)) })
     return reply(201, JSON.stringify({ room_id: room.id, room_url: `${base}/r/${room.id}` }), 'application/json')
   }
   if (req.method === 'GET' && url.pathname === '/start') return reply(200, startPrompt(base) + '\n')
@@ -616,7 +583,7 @@ async function handle(req, res) {
       rows = await readMessages(id, after)
     }
     const fresh = (await getRoom(id)) ?? room
-    if (q.get('format') === 'json') return reply(200, JSON.stringify({ closed: fresh.closed, messages: rows, people: await readPeople(id), ticket: (await pool.query('select summary, status from tickets where room_id=$1', [id])).rows[0] ?? null }), 'application/json')
+    if (q.get('format') === 'json') return reply(200, JSON.stringify({ closed: fresh.closed, typing: (await pool.query('select typing from rooms where id=$1', [id])).rows[0]?.typing ?? null, messages: rows, people: await readPeople(id), ticket: (await pool.query('select summary, status from tickets where room_id=$1', [id])).rows[0] ?? null }), 'application/json')
     return reply(200, transcriptText(rows, after, fresh.closed ? 'ROOM CLOSED' : ''))
   }
 

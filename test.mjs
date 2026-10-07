@@ -109,7 +109,7 @@ if (process.env.ROOM_SERVICE_KEY) {
   r = await call(`/r/${j.room_id}/messages?after=0&format=json`)
   const jm = JSON.parse(r.text); ok('room starts with the incident + an open ticket', jm.messages[0].meta.type === 'incident' && jm.ticket.status === 'open', r.text)
   r = await call(`/r/${j.room_id}/messages?as=bot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: 'hi', meta: { type: 'x' } }) })
-  r = await call(`/r/${j.room_id}/messages?after=1&format=json`); ok('json post keeps meta', JSON.parse(r.text).messages[0].meta.type === 'x', r.text)
+  r = await call(`/r/${j.room_id}/messages?after=2&format=json`); ok('json post keeps meta', JSON.parse(r.text).messages[0].meta.type === 'x', r.text)
 }
 r = await call('/help', form({ issue: 'invoices 500' })); ok('/help opens a room and returns the join prompt', r.status === 200 && r.text.includes('live support chat'), r.text)
 r = await call('/admin', { headers: { accept: 'text/html' } }); ok('admin lists tickets', r.text.includes('invoices 500'))

@@ -208,7 +208,7 @@ const firstLine = (v) => v.replace(/https?:\/\/\S+/g, '').trim().slice(0, 140)
 async function handleMarkers(roomId, text) {
   for (const m of text.matchAll(/^\s*(LOGS|REPRODUCED|VERIFIED):\s*(.+)$/gim)) {
     const [stage, label] = STAGE_OF[m[1].toUpperCase()]
-    await stageOnce(roomId, stage, `${label}: ${firstLine(m[2])}`, '')
+    await stageOnce(roomId, stage, `${label}: ${firstLine(m[2])}`, (m[2].match(/https?:\/\/\S+/) ?? [''])[0])
   }
   for (const m of text.matchAll(/^\s*PATCH:\s*(\S+)\s+([0-9a-f]{7,40})/gim)) {
     const [, branch, sha] = m
@@ -255,6 +255,7 @@ async function releaseTurn(roomId, branch, sha) {
   const key = `${roomId}:release`
   while (busy.has(key)) await sleep(1000)
   busy.add(key)
+  typing(roomId, RELEASE_NAME)
   try {
     const room = (await pool.query('select id, goal, release_session from rooms where id=$1', [roomId])).rows[0]
     const input = `${releaseInstructions(roomId, branch, sha)}\n\n=== SUPPORT ROOM ${PUBLIC_BASE}/r/${roomId} ===\nIssue: ${room.goal}`
@@ -269,7 +270,7 @@ async function releaseTurn(roomId, branch, sha) {
   } catch (e) {
     log(`${roomId}: release turn failed: ${e.message}`)
     await post(roomId, `Release review hit an error on our side (${e.message.slice(0, 120)}). Retrying shortly.`, { type: 'support', role: 'release', error: true }, RELEASE_NAME)
-  } finally { busy.delete(key) }
+  } finally { busy.delete(key); typing(roomId, busy.has(roomId) ? SUPPORT_NAME : null) }
 }
 
 async function rejectToFixer(roomId, reason) {
@@ -369,8 +370,10 @@ const busy = new Set()
 const scanned = new Set() // room:n of self-posted support lines already checked for markers
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
+const typing = (roomId, who) => pool.query('update rooms set typing=$2 where id=$1', [roomId, who]).catch(() => {})
 async function turn(room, fresh, isFirst, override = null) {
   busy.add(room.id)
+  typing(room.id, SUPPORT_NAME)
   try {
     await stageOnce(room.id, 'investigating', `${SUPPORT_NAME} is pulling the request from our logs`)
     const transcript = fresh.map(fmt).join('\n\n')
@@ -392,6 +395,7 @@ async function turn(room, fresh, isFirst, override = null) {
     await post(room.id, `Sorry, I hit an error on my side (${e.message.slice(0, 120)}). Please resend your last message in a moment.`, { type: 'support', error: true, instance: INSTANCE })
   } finally {
     busy.delete(room.id)
+    typing(room.id, busy.has(`${room.id}:release`) ? RELEASE_NAME : null)
   }
 }
 
@@ -425,6 +429,8 @@ async function tick() {
 
 await pool.query(`alter table rooms add column if not exists support_session text`).catch(() => {})
 await pool.query(`alter table rooms add column if not exists release_session text`).catch(() => {})
+await pool.query(`alter table rooms add column if not exists typing text`).catch(() => {})
+await pool.query(`update rooms set typing=null where typing is not null`).catch(() => {})
 await pool.query(`alter table tickets add column if not exists ai_title text, add column if not exists severity text, add column if not exists postmortem text, add column if not exists postmortem_model text`).catch(() => {})
 log(`support worker up: mode=${MODE}${MODE === 'agent37' ? ` instance=${INSTANCE}${MODEL ? ` model=${MODEL}` : ''}` : ''} rooms=${ROOM_BASE} prod=${PROD_URL} ai=${AI_ON ? AI_MODELS[0] : 'off'}`)
 for (;;) {
