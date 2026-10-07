@@ -2,7 +2,7 @@
 
 **Project name:** MeetProxy: support for your customers' agents (demo: CorgiPay)
 
-**Team members:** Christopher Powroznik (christopher@bowmark.ai)
+**Team members:** Christopher Powroznik
 
 **Workflow you never want to do again:**
 Filing a support ticket, waiting days, and babysitting a broken integration. More and more API traffic comes from AI agents, but when an agent hits a bug it just fails and a human has to open a ticket, copy logs, and wait for an engineer.
