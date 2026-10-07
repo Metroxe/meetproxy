@@ -21,6 +21,7 @@ const RELEASE_NAME = process.env.RELEASE_NAME ?? `${COMPANY} Release (Agent37)`
 const KEY = process.env.AGENT37_API_KEY ?? ''
 const INSTANCE = process.env.AGENT37_INSTANCE ?? ''
 const MODEL = process.env.AGENT37_MODEL ?? ''
+const RELEASE_MODEL = process.env.AGENT37_RELEASE_MODEL ?? MODEL
 const REPO_PATH = process.env.CORGIPAY_REPO_PATH ?? '/home/node/corgipay'
 const PROD_URL = (process.env.CORGIPAY_PROD_URL ?? 'https://corgipay.boilerroom.tech').replace(/\/$/, '')
 const PUBLIC_BASE = (process.env.BASE_URL ?? ROOM_BASE).replace(/\/$/, '')
@@ -104,8 +105,8 @@ function parseAgent37(j) {
   return ''
 }
 
-async function agent37Turn(sessionId, input) {
-  const body = { input, ...(sessionId ? { session_id: sessionId } : {}), ...(MODEL ? { model: MODEL } : {}) }
+async function agent37Turn(sessionId, input, model = MODEL) {
+  const body = { input, ...(sessionId ? { session_id: sessionId } : {}), ...(model ? { model } : {}) }
   for (let attempt = 0; attempt < 12; attempt++) {
     const res = await fetch(`https://${INSTANCE}.agent37.app/v1/responses`, {
       method: 'POST', headers: { 'X-Agent37-Key': KEY, 'content-type': 'application/json' }, body: JSON.stringify(body),
@@ -122,7 +123,7 @@ async function agent37Turn(sessionId, input) {
     if (res.status === 409 || res.status === 503) { log(`agent37 ${res.status}, retrying`); await sleep(Math.min(5000 * (attempt + 1), 20000)); continue }
     if (!res.ok) throw new Error(`Agent37 HTTP ${res.status}: ${raw.slice(0, 300)}`)
     if (j.status === 'failed') throw new Error(`Agent37 turn failed: ${JSON.stringify(j.error ?? {}).slice(0, 300)}`)
-    return { text: parseAgent37(j), sessionId: j.session_id ?? sessionId, model: j.model ?? MODEL, usage: j.usage ?? null }
+    return { text: parseAgent37(j), sessionId: j.session_id ?? sessionId, model: j.model ?? model, usage: j.usage ?? null }
   }
   throw new Error('Agent37 stayed busy')
 }
@@ -260,8 +261,8 @@ async function releaseTurn(roomId, branch, sha) {
     const room = (await pool.query('select id, goal, release_session from rooms where id=$1', [roomId])).rows[0]
     const input = `${releaseInstructions(roomId, branch, sha)}\n\n=== SUPPORT ROOM ${PUBLIC_BASE}/r/${roomId} ===\nIssue: ${room.goal}`
     log(`${roomId}: release review of ${branch} ${sha} -> ${MODE}`)
-    const meta = { type: 'support', role: 'release', instance: MODE === 'mock' ? 'mock' : INSTANCE, model: MODE === 'mock' ? 'mock' : MODEL || null, mode: MODE }
-    const out = MODE === 'agent37' ? await agent37Turn(room.release_session ?? null, input)
+    const meta = { type: 'support', role: 'release', instance: MODE === 'mock' ? 'mock' : INSTANCE, model: MODE === 'mock' ? 'mock' : RELEASE_MODEL || null, mode: MODE }
+    const out = MODE === 'agent37' ? await agent37Turn(room.release_session ?? null, input, RELEASE_MODEL)
       : await mockRelease(room.release_session, input, room, async (text) => { await post(roomId, text, meta, RELEASE_NAME); await handleMarkers(roomId, text) })
     if (out.sessionId && out.sessionId !== room.release_session) await pool.query('update rooms set release_session=$2 where id=$1', [roomId, out.sessionId])
     const text = out.text.trim() || '(The release agent returned an empty reply.)'
