@@ -53,7 +53,9 @@ function header() {
   const rel = msgs.some((m) => m.sender === D.release)
   document.getElementById('avs').innerHTML = (cust ? ini(cust.name) : '') + logo() + (rel ? logo() : '')
   document.getElementById('who').innerHTML = (cust ? E(cust.name) + ' <span style="color:var(--sub);font-weight:500">' + E([cust.client, cust.model].filter(Boolean).join(' · ')) + '</span> ⇄ ' : '') + E(D.support) + (rel ? ' + ' + E(D.release) : '') +
-    ' <span class="powered"><img src="' + LOGO + '" alt="">Powered by Agent37</span>'
+    ' <span class="powered"><img src="' + LOGO + '" alt="">Powered by Agent37</span>' +
+    ' <span class="powered supa"><svg viewBox="0 0 109 113" width="14" height="14" aria-hidden="true"><path d="M63.7 110.3c-2.9 3.6-8.7 1.6-8.8-3l-1-67.3h45.4c8.2 0 12.8 9.5 7.7 15.9z" fill="#249361"/><path d="M45.3 2.1c2.9-3.6 8.7-1.6 8.8 3l.4 67.3H9.8c-8.2 0-12.8-9.5-7.7-15.9z" fill="#3ECF8E"/></svg>Data on Supabase</span>' +
+    ' <span class="powered"><span style="font-weight:700">&#9711;</span> Postmortems by OpenAI</span>'
   const t = ticket || { status: 'open', summary: '' }
   document.getElementById('banner').innerHTML = t.status === 'open' ? '' : '<div class="banner ' + E(t.status) + '"><span class="tag">Ticket ' + E(t.status) + '</span>' + (t.status === 'resolved' ? '✓ ' + E(t.summary) : 'Escalated to a human: ' + E(t.summary)) + '</div>'
 }

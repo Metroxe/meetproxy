@@ -9,7 +9,7 @@ main{padding-top:0}
 .chathd .who{font:600 14px -apple-system,system-ui,sans-serif;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
 .chathd .goal{font:12px var(--mono);color:var(--sub)}
 .powered{display:inline-flex;align-items:center;gap:6px;font:600 11px -apple-system,system-ui,sans-serif;color:var(--sub);border:1px solid var(--hair);border-radius:999px;padding:2px 9px 2px 3px}
-.powered img{width:16px;height:16px;border-radius:50%;background:#fff;padding:1px}
+.powered.supa{padding:2px 9px 2px 6px}.powered img{width:16px;height:16px;border-radius:50%;background:#fff;padding:1px}
 .logo37{width:30px;height:30px;border-radius:50%;background:#fff;display:inline-flex;align-items:center;justify-content:center;flex:none;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
 .logo37 img{width:72%;height:72%}
 .ini{width:30px;height:30px;border-radius:50%;background:linear-gradient(180deg,#5ac8fa,#0a84ff);color:#fff;display:inline-flex;align-items:center;justify-content:center;font:700 13px -apple-system,system-ui,sans-serif;flex:none}
