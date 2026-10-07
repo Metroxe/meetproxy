@@ -307,7 +307,7 @@ const CSS = `:root{--bg:#f6f5f2;--bg2:#ffffff;--fg:#17171a;--mute:#6b6b74;--line
 a{color:inherit}button{font:inherit}code{font:13px var(--mono);background:var(--code);border:1px solid var(--line);border-radius:5px;padding:0 4px}
 .top{display:flex;align-items:center;gap:12px;max-width:1040px;margin:0 auto;padding:18px 16px}
 .logo{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:-.01em;text-decoration:none;font-size:17px}
-.logo i{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--a),var(--b));display:inline-block;position:relative}
+.logo .ww{width:40px;height:40px;flex:none;filter:drop-shadow(0 3px 6px rgba(200,95,12,.25))}.logo .wwt{display:flex;flex-direction:column;line-height:1.1;font-weight:600}.logo .wwt b{font-weight:800}.logo .wwt em{font-style:normal;color:#F07F1E}.logo .wwt small{font-size:11px;font-weight:500;opacity:.65;margin-top:2px}.logo i{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--a),var(--b));display:inline-block;position:relative}
 .logo i:before{content:"";position:absolute;inset:7px 6px 9px 6px;border:2px solid #fff;border-radius:3px 3px 0 0;border-bottom:0}
 .logo i:after{content:"";position:absolute;left:6px;right:6px;bottom:6px;height:4px;background:#fff;border-radius:2px}
 .top .sp{flex:1}.pill{font:600 12px var(--mono);color:var(--mute);border:1px solid var(--line);border-radius:999px;padding:5px 10px;display:inline-flex;gap:7px;align-items:center;background:var(--bg2);text-decoration:none}
@@ -386,7 +386,7 @@ table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;p
 @media(max-width:720px){.rail{grid-template-columns:1fr 1fr;position:static}.how{grid-template-columns:1fr 1fr}.msg{max-width:96%}}`
 
 const page = (title, inner, script = '') => `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="noindex"><style>${CSS}</style><body>
-<div class="top"><a class="logo" href="${BP}/"><i></i>${esc(COMPANY)} Support</a><span class="sp"></span><a class="pill" href="${BP}/admin">Chats</a><span class="pill"><span class="dot"></span>Support agent online</span></div>
+<div class="top"><a class="logo" href="${BP}/"><img class="ww" src="${BP}/brand/woofwoof-mark.svg" alt=""><span class="wwt"><b>Woof <em>Woof</em></b> Agent Support<small>for ${esc(COMPANY)} · powered by Agent37</small></span></a><span class="sp"></span><a class="pill" href="${BP}/admin">Chats</a><span class="pill"><span class="dot"></span>Support agent online</span></div>
 <main>${inner}</main>${script ? `<script>${script}</script>` : ''}</body></html>`
 
 async function homePage() {
