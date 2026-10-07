@@ -96,7 +96,7 @@ r = await call(`/r/${iid}/join?kind=human&as=Sam`, { method: 'POST' })
 ok('human can register without posting', r.text.includes('joined as Sam (human)'), r.text)
 r = await call(`/r/${iid}/messages?after=0&format=json`)
 ok('json includes people', JSON.parse(r.text).people.some((p) => p.name === 'Sam' && p.kind === 'human'))
-r = await call('/', { headers: { accept: 'text/html' } }); ok('landing page explains the product', r.text.includes('Paste one prompt'))
+r = await call('/', { headers: { accept: 'text/html' } }); ok('landing page explains the product', r.text.includes('fixes the bug in production') && r.text.includes('Recent incidents'))
 r = await call('/start'); ok('bootstrap prompt carries the warning', r.text.includes('prompt injection'))
 
 // support desk: service-key room creation, json meta, tickets

@@ -17,7 +17,8 @@ const BASE_URL = process.env.BASE_URL // public base URL if deployed; falls back
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const BP = (process.env.BASE_PATH ?? (process.env.BASE_URL ? new URL(process.env.BASE_URL).pathname : '')).replace(/\/$/, '') // e.g. /support when mounted under another site
 export const COMPANY = process.env.COMPANY_NAME ?? 'CorgiPay'
-export const SUPPORT_NAME = process.env.SUPPORT_NAME ?? `${COMPANY} Support`
+export const SUPPORT_NAME = process.env.SUPPORT_NAME ?? `${COMPANY} Support (Agent37)`
+export const RELEASE_NAME = process.env.RELEASE_NAME ?? `${COMPANY} Release (Agent37)`
 const ROOM_SERVICE_KEY = process.env.ROOM_SERVICE_KEY ?? '' // lets the CorgiPay API open rooms on a 500
 const isLocalDb = (u) => /@(localhost|127\.0\.0\.1|\[::1\])[:/]/.test(u)
 // Supabase (or any hosted Postgres): TLS without CA pinning; drop sslmode from the URL so pg uses our ssl object.
@@ -83,6 +84,10 @@ create table if not exists tickets (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+alter table tickets add column if not exists ai_title text;
+alter table tickets add column if not exists severity text;
+alter table tickets add column if not exists postmortem text;
+alter table tickets add column if not exists postmortem_model text;
 
 `)
 
@@ -91,7 +96,7 @@ create table if not exists tickets (
 const sha = (s) => createHash('sha256').update(s).digest('hex')
 const newKey = () => randomBytes(16).toString('hex')
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
-const cleanName = (s) => (s ?? '').replace(/[^\w .-]/g, '').slice(0, 32).trim() || 'anonymous'
+const cleanName = (s) => (s ?? '').replace(/[^\w .()-]/g, '').slice(0, 32).trim() || 'anonymous'
 const cleanLabel = (s, n = 40) => (s ?? '').replace(/[^\w .:/+()-]/g, '').slice(0, n).trim()
 const clock = (d) => new Date(d).toISOString().slice(11, 19) + 'Z'
 const when = (d) => new Date(d).toISOString().replace('T', ' ').slice(0, 16) + ' UTC'
@@ -337,7 +342,7 @@ details.paste summary::-webkit-details-marker{display:none}details.paste summary
 pre.prompt{margin:12px 0;padding:14px 16px;background:var(--code);border:1px solid var(--line);border-radius:12px;font:12.5px/1.6 var(--mono);white-space:pre-wrap;word-break:break-word;max-height:260px;overflow:auto}
 .stream{display:flex;flex-direction:column;gap:14px;margin-top:22px}
 .msg{display:flex;gap:10px;max-width:82%;animation:in .35s ease}.msg.s{align-self:flex-end;flex-direction:row-reverse}
-.msg.c{--c:var(--a);--cs:var(--a-soft)}.msg.s{--c:var(--b);--cs:var(--b-soft)}
+.msg.c{--c:var(--a);--cs:var(--a-soft)}.msg.s{--c:var(--b);--cs:var(--b-soft)}.msg.s.r,.chip.s.r{--c:var(--ok);--cs:var(--ok-soft)}
 @keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .bub{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:11px 14px;box-shadow:var(--shadow);min-width:0}
 .msg.c .bub{border-top-left-radius:5px;border-left:3px solid var(--c)}.msg.s .bub{border-top-right-radius:5px;border-right:3px solid var(--c)}
@@ -365,7 +370,7 @@ table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;p
 .st{font:700 11px var(--mono);text-transform:uppercase;border-radius:6px;padding:2px 7px}.st.open{background:var(--a-soft);color:var(--a)}.st.resolved{background:var(--ok-soft);color:var(--ok)}.st.escalated{background:var(--esc-soft);color:var(--esc)}
 .lock input{font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);width:100%;margin:10px 0}
 .foot{margin-top:40px;font-size:12px;color:var(--mute);text-align:center}
-.rail{list-style:none;margin:18px 0 0;padding:14px;display:grid;grid-template-columns:repeat(5,1fr);gap:8px;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);position:sticky;top:8px;z-index:5}
+.rail{list-style:none;margin:18px 0 0;padding:14px;display:grid;grid-template-columns:repeat(7,1fr);gap:8px;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);position:sticky;top:8px;z-index:5}
 .rail li{position:relative;display:flex;flex-direction:column;gap:6px;padding:10px 10px 8px;border-radius:12px;color:var(--mute);transition:background .3s}
 .rail li .b{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:700 12px var(--mono);border:2px solid var(--line);background:var(--bg2)}
 .rail li .l{font-weight:650;font-size:13.5px;line-height:1.25}.rail li .t{font:11px var(--mono)}.rail li code{font-size:11px}
@@ -374,6 +379,8 @@ table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;p
 @keyframes ring{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--b) 55%,transparent)}100%{box-shadow:0 0 0 9px transparent}}
 #banner .banner{margin-top:12px}
 .card.incident{border-color:color-mix(in srgb,var(--bug) 45%,var(--line));background:linear-gradient(180deg,var(--bug-soft),var(--card) 70%)}.card.incident .kick{color:var(--bug)}
+.card.ai{border-color:color-mix(in srgb,var(--b) 40%,var(--line));background:linear-gradient(180deg,var(--b-soft),var(--card) 75%)}.card.ai .kick{color:var(--b)}.card.ai .pm{white-space:pre-wrap;font-size:14.5px;line-height:1.55;margin-top:6px}.card.ai .sev{font:700 11px var(--mono);border-radius:6px;padding:2px 7px;background:var(--bug-soft);color:var(--bug);margin-right:6px}
+.inc{list-style:none;margin:0;padding:0}.inc li{display:flex;gap:10px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--line)}.inc li:last-child{border:0}.inc a{color:inherit;text-decoration:none;flex:1;min-width:0}.inc a:hover{text-decoration:underline}
 .flags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.flags .flag{margin:0}.flag.ship{color:var(--b);background:var(--b-soft)}
 @media(max-width:720px){.rail{grid-template-columns:1fr 1fr;position:static}.how{grid-template-columns:1fr 1fr}.msg{max-width:96%}}`
 
@@ -381,15 +388,19 @@ const page = (title, inner, script = '') => `<!doctype html><html lang="en"><met
 <div class="top"><a class="logo" href="${BP}/"><i></i>${esc(COMPANY)} Support</a><span class="sp"></span><a class="pill" href="${BP}/admin">Tickets</a><span class="pill"><span class="dot"></span>Support agent online</span></div>
 <main>${inner}</main>${script ? `<script>${script}</script>` : ''}</body></html>`
 
-function homePage() {
+async function homePage() {
+  const recent = (await pool.query(`select t.room_id, t.status, t.summary, t.ai_title, t.severity, t.updated_at, r.goal from tickets t join rooms r on r.id=t.room_id order by t.created_at desc limit 8`).catch(() => ({ rows: [] }))).rows
+  const ago = (d) => { const m = Math.round((Date.now() - new Date(d)) / 60000); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago` }
   const body = `<section class="hero"><div class="eyebrow">${esc(COMPANY)} API · support for agents</div>
-<h1>Stuck on the ${esc(COMPANY)} API? <em>Paste one prompt into your agent.</em></h1>
-<p class="lede">When your agent (Claude Code, Codex, ChatGPT, anything that can run curl or open a URL) hits a ${esc(COMPANY)} bug, the 500 response hands it a support room. Our support agent on Agent37 has our codebase, reproduces the bug, ships the fix to prod, and tells your agent to retry. No MCP, no SDK, no account.</p></section>
+<h1>${esc(COMPANY)} Support</h1>
+<p class="lede">When your agent hits a ${esc(COMPANY)} error, it joins a room with our Agent37 support engineer, who fixes the bug in production while you watch.</p></section>
+<div class="panel"><b>Recent incidents</b> <span class="note">· <a href="${BP}/admin">open the ticket dashboard →</a></span>
+<ul class="inc">${recent.map((t) => `<li><span class="st ${esc(t.status)}">${esc(t.status)}</span><a href="${BP}/r/${t.room_id}">${t.severity ? `<b>${esc(t.severity)}</b> ` : ''}${esc(t.ai_title || t.summary || t.goal)}</a><span class="note">${ago(t.updated_at)}</span></li>`).join('') || '<li class="note">No incidents yet.</li>'}</ul></div>
 <form class="panel" method="post" action="${BP}/help" id="f"><b>What's going wrong?</b> <span class="note">(optional, one line)</span>
 <div class="ask"><input name="issue" maxlength="300" placeholder="e.g. POST /v1/charges returns 400 unsupported_api_version" autocomplete="off"><button class="btn" id="go">Get help →</button></div>
 <div class="note">You'll get a prompt to paste into your agent, and a live page to watch the two agents work.</div></form>
 <section class="how"><div><b>1 · Your agent hits a 500</b>The error body carries a support room link and one line telling the agent to join.</div><div><b>2 · It joins over curl</b>Posts the failing request. Or open a room yourself above and paste the prompt.</div><div><b>3 · Our agent fixes it</b>Agent37 support engineer reproduces, patches, tests, pushes, and waits for prod.</div><div><b>4 · Retry: 200 OK</b>Your agent retries and your task finishes. The ticket closes itself.</div></section>
-<div class="spons">Support agent: an Agent37 Cloud Hermes instance with the ${esc(COMPANY)} repo cloned · Rooms and tickets: Supabase Postgres</div>`
+<div class="spons">Support agent: an Agent37 Cloud Hermes instance with the ${esc(COMPANY)} repo cloned · Incident summaries and postmortems: OpenAI gpt-5.4-mini via Agent37's model router · Rooms and tickets: Supabase Postgres</div>`
   return page(`${COMPANY} Support`, body, `f.addEventListener('submit',()=>{go.disabled=true;go.textContent='Opening a room…'})`)
 }
 
@@ -397,7 +408,7 @@ async function roomPage(req, room, key) {
   const [rows, people, ticket] = await Promise.all([readMessages(room.id, 0), readPeople(room.id),
     pool.query('select summary, status from tickets where room_id=$1', [room.id]).then((r) => r.rows[0] ?? null)])
   const prompt = joinPrompt(baseOf(req), room, room.visibility === 'password' || room.visibility === 'private' ? key : null)
-  const data = JSON.stringify({ id: room.id, support: SUPPORT_NAME, api: `${COMPANY} API`, instance: process.env.AGENT37_INSTANCE ?? '', messages: rows, people, ticket }).replace(/</g, '\\u003c')
+  const data = JSON.stringify({ id: room.id, support: SUPPORT_NAME, release: RELEASE_NAME, api: `${COMPANY} API`, instance: process.env.AGENT37_INSTANCE ?? '', messages: rows, people, ticket }).replace(/</g, '\\u003c')
   const body = `<div class="roomhd"><div class="eyebrow">Live support room</div><h2>${esc(room.goal || 'Support')}</h2>
 <div class="vs" id="vs"></div></div>
 <ol class="rail" id="rail"></ol><div id="banner"></div>
@@ -409,35 +420,36 @@ async function roomPage(req, room, key) {
 const E=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 const st=document.getElementById('stream');let last=0,msgs=[],ticket=D.ticket;const people={};for(const p of D.people)people[p.name]=p;
 const tm=d=>new Date(d).toLocaleTimeString([],{hour:'numeric',minute:'2-digit',second:'2-digit'});
-const isS=m=>m.sender===D.support,isApi=m=>m.meta&&m.meta.type==='incident';
+const isS=m=>m.sender===D.support||m.sender===D.release,isApi=m=>m.meta&&m.meta.type==='incident';
 function md(t){const parts=String(t).split(/\`\`\`/);return parts.map((p,i)=>{if(i%2){const nl=p.indexOf('\\n');const head=nl>=0?p.slice(0,nl).trim():'';const code=nl>=0?p.slice(nl+1):p;const fn=/[\\/.:]/.test(head)?'<span class="fn">'+E(head)+'</span>':'';return '<pre>'+fn+E(code.replace(/\\n$/,''))+'</pre>'}
- return p.trim()?p.trim().split(/\\n{2,}/).map(x=>'<p>'+E(x).replace(/\`([^\`\\n]+)\`/g,'<code>$1</code>').replace(/\\*\\*([^*\\n]+)\\*\\*/g,'<b>$1</b>')+'</p>').join(''):''}).join('')}
-const MARK=/^\\s*(FIXED|DEPLOYED|RESOLVED|ESCALATE|COMMITTED):\\s*(.+)$/gim;
-function stages(){const S={};const set=(k,m,d)=>{if(!S[k])S[k]={at:m.created_at,d:d||''}};
+ return p.trim()?p.trim().split(/\\n{2,}/).map(x=>'<p>'+E(x).replace(/\`([^\`\\n]+)\`/g,'<code>$1</code>').replace(/\\*\\*([^*\\n]+)\\*\\*/g,'<b>$1</b>').replace(/(https?:\\/\\/[^\\s<]+)/g,u=>'<a href="'+u+'" target="_blank" rel="noopener">'+(u.includes('/explore')?'Open in Grafana Explore':u)+'</a>')+'</p>').join(''):''}).join('')}
+const MARK=/^\\s*(LOGS|REPRODUCED|VERIFIED|PATCH|MERGED|REJECTED|FIXED|DEPLOYED|RESOLVED|ESCALATE|COMMITTED):\\s*(.+)$/gim;
+function stages(){const S={};const set=(k,m,d)=>{if(!S[k])S[k]={at:m.created_at,d:d||''}};const MK={LOGS:'logs',REPRODUCED:'reproduced',VERIFIED:'verified',MERGED:'review'};
  for(const m of msgs){const x=m.meta||{};if(x.type==='incident')set('reported',m,x.request_id);
   if(x.type==='status')set(x.stage,m,x.detail);
-  if(isS(m)&&x.type!=='status'){set('investigating',m,'');for(const mm of m.body.matchAll(MARK)){const t=mm[1].toUpperCase();const sh=(mm[2].match(/\\b[0-9a-f]{7,40}\\b/)||[])[0];if(t==='FIXED'||t==='COMMITTED')set('committed',m,sh?sh.slice(0,7):'');if(t==='DEPLOYED'){set('committed',m,sh?sh.slice(0,7):'')}}}}
+  if(isS(m)&&!['status','ai','ticket'].includes(x.type)){for(const mm of m.body.matchAll(MARK)){const t=mm[1].toUpperCase();const sh=(mm[2].match(/\\b[0-9a-f]{7,40}\\b/)||[])[0];if(MK[t])set(MK[t],m,t==='MERGED'&&sh?sh.slice(0,7):'');if(t==='DEPLOYED')set('review',m,sh?sh.slice(0,7):'')}}}
  if(!S.reported&&msgs.length)S.reported={at:msgs[0].created_at,d:''};return S}
-const STEPS=[['reported','Bug reported'],['investigating','Agent37 investigating'],['committed','Patch committed'],['deployed','Deployed to prod'],['retried','Customer retried: 200 OK']];
+const STEPS=[['reported','Incident opened'],['logs','Logs found (Grafana)'],['reproduced','Reproduced in sandbox'],['verified','Fix verified on dev server'],['review','Release review'],['deployed','Deployed to prod'],['retried','Customer retried (200)']];
 function rail(){const S=stages();let cur=STEPS.findIndex(s=>!S[s[0]]);if(cur<0)cur=STEPS.length;
  document.getElementById('rail').innerHTML=STEPS.map(([k,l],i)=>'<li class="'+(S[k]?'done':i===cur?'now':'')+'"><span class="b">'+(S[k]?'✓':i+1)+'</span><span class="l">'+l+(S[k]&&S[k].d?' <code>'+E(S[k].d)+'</code>':'')+'</span><span class="t">'+(S[k]?tm(S[k].at):i===cur?'in progress…':'')+'</span></li>').join('');return cur}
 function header(){const cust=Object.values(people).find(p=>p.name!==D.support&&p.name!==D.api&&p.kind==='agent');
  const c=cust?'<span class="chip c"><span class="av">'+E(cust.name[0].toUpperCase())+'</span>'+E(cust.name)+' <small>'+E([cust.client,cust.model].filter(Boolean).join(' · ')||'agent')+(cust.human?' · for '+E(cust.human):'')+'</small></span>':'<span class="chip c"><span class="av">?</span>Customer\\'s agent <small>joining…</small></span>';
- document.getElementById('vs').innerHTML=c+'<span class="x">⇄</span><span class="chip s"><span class="av">S</span>'+E(D.support)+' <small>Agent37'+(D.instance?' · '+E(D.instance):'')+'</small></span>';
+ document.getElementById('vs').innerHTML=c+'<span class="x">⇄</span><span class="chip s"><span class="av">S</span>'+E(D.support)+' <small>fixer'+(D.instance?' · '+E(D.instance):'')+'</small></span>'+(msgs.some(m=>m.sender===D.release)?'<span class="chip s r"><span class="av">R</span>'+E(D.release)+' <small>review + ship</small></span>':'');
  const t=ticket||{status:'open',summary:''};
  document.getElementById('banner').innerHTML=t.status==='open'?'':'<div class="banner '+E(t.status)+'"><span class="tag">Ticket '+E(t.status)+'</span>'+(t.status==='resolved'?'✓ '+E(t.summary):'Escalated to a human: '+E(t.summary))+'</div>'}
 function render(){let h='';
  for(const m of msgs){const x=m.meta||{};
-  if(x.type==='incident'){h+='<div class="card incident"><div class="kick">● ${esc(COMPANY)} API · HTTP 500 · '+E(x.request_id)+'</div><h3>'+E(x.endpoint)+': '+E(x.error)+'</h3><div class="txt">'+md('\`\`\`request (sanitized)\\n'+JSON.stringify(x.request||{},null,2)+'\\n\`\`\`')+'</div><div class="note">API build <code>'+E((x.api_sha||'').slice(0,7))+'</code> · support room opened automatically from the error response</div></div>';continue}
+  if(x.type==='incident'){h+='<div class="card incident"><div class="kick">● ${esc(COMPANY)} API · HTTP 500 · '+E(x.request_id)+'</div><h3>'+E(x.endpoint)+': Something went wrong on our side</h3><div class="note">The customer only saw a generic 500 with request_id <code>'+E(x.request_id)+'</code>. The real error is in our logs.</div><div class="txt">'+md('\`\`\`request (sanitized)\\n'+JSON.stringify(x.request||{},null,2)+'\\n\`\`\`')+'</div><div class="note">API build <code>'+E((x.api_sha||'').slice(0,7))+'</code> · support room opened automatically from the error response</div></div>';continue}
   if(x.type==='status'){h+='<div class="sys">'+tm(m.created_at)+' · '+E(m.body)+'</div>';continue}
+  if(x.type==='ai'){const lbl=(x.kind==='postmortem'?'Postmortem':'Incident summary')+' · OpenAI '+E(String(x.model||'').replace(/^openai\//,''));h+='<div class="card ai"><div class="kick">◆ '+lbl+'</div>'+(x.kind==='postmortem'?'<div class="pm">'+E(m.body)+'</div>':'<h3><span class="sev">'+E(x.severity)+'</span>'+E(x.title)+'</h3>'+(x.why?'<div class="note">'+E(x.why)+'</div>':''))+'</div>';continue}
   if(x.type==='ticket'){h+='<div class="card ticket '+E(x.status)+'"><div class="kick">'+(x.status==='resolved'?'✓ Ticket resolved':'⚑ Escalated to a human')+'</div><h3>'+E(x.summary)+'</h3></div>';continue}
   if(m.sender_kind==='human'){h+='<div class="human"><b>'+E(m.sender)+'</b>: '+E(m.body)+'</div>';continue}
-  const s=isS(m),k=s?'s':'c',p=people[m.sender]||{};let flags='';
-  const body=m.body.replace(MARK,(_,t,v)=>{t=t.toUpperCase();const cls=t==='ESCALATE'?'esc':t==='RESOLVED'?'ok':'ship';flags+='<span class="flag '+cls+'">'+({FIXED:'⎇ FIXED',COMMITTED:'⎇ COMMITTED',DEPLOYED:'🚀 DEPLOYED',RESOLVED:'✓ RESOLVED',ESCALATE:'⚑ ESCALATE'})[t]+': '+E(v)+'</span>';return ''});
+  const s=isS(m),k=s?(m.sender===D.release?'s r':'s'):'c',p=people[m.sender]||{};let flags='';
+  const body=m.body.replace(MARK,(_,t,v)=>{t=t.toUpperCase();const cls=t==='ESCALATE'||t==='REJECTED'?'esc':t==='RESOLVED'||t==='VERIFIED'?'ok':t==='REPRODUCED'?'bug':'ship';flags+='<span class="flag '+cls+'">'+({LOGS:'▤ LOGS',REPRODUCED:'✗ REPRODUCED',VERIFIED:'✓ VERIFIED',PATCH:'⎇ PATCH',MERGED:'⎇ MERGED',REJECTED:'⚑ REJECTED',FIXED:'⎇ FIXED',COMMITTED:'⎇ COMMITTED',DEPLOYED:'🚀 DEPLOYED',RESOLVED:'✓ RESOLVED',ESCALATE:'⚑ ESCALATE'})[t]+': '+E(v)+'</span>';return ''});
   const badge=s?'<span class="badge a37">Agent37'+(x.instance||D.instance?' · '+E(x.instance||D.instance):'')+'</span>'+((x.model||p.model)?'<span class="badge">'+E(x.model||p.model)+'</span>':''):'<span class="badge">'+E([p.client,p.model].filter(Boolean).join(' · ')||'agent')+'</span>';
   h+='<div class="msg '+k+'"><span class="av">'+E((m.sender[0]||'?').toUpperCase())+'</span><div style="min-width:0"><div class="meta"><b>'+E(m.sender)+'</b>'+badge+'<span class="time">'+tm(m.created_at)+'</span></div><div class="bub"><div class="txt">'+md(body.trim())+'</div>'+(flags?'<div class="flags">'+flags+'</div>':'')+'</div></div></div>'}
  const cur=rail();const lastM=msgs[msgs.length-1];const t=ticket||{};
- if(lastM&&!isS(lastM)&&t.status!=='resolved'&&!(lastM.meta&&['status','ticket'].includes(lastM.meta.type)))h+='<div class="typing"><span><i></i><i></i><i></i></span>'+E(D.support)+(cur<=1?' is reproducing the bug…':' is on it…')+'</div>';
+ if(lastM&&!isS(lastM)&&t.status!=='resolved'&&!(lastM.meta&&['status','ticket','ai'].includes(lastM.meta.type)))h+='<div class="typing"><span><i></i><i></i><i></i></span>'+E(D.support)+(cur<=1?' is reproducing the bug…':' is on it…')+'</div>';
  const atEnd=innerHeight+scrollY>=document.body.scrollHeight-200;st.innerHTML=h;header();
  const cust=msgs.some(m=>!isS(m)&&!isApi(m));const pd=document.getElementById('paste');if(!pd.dataset.touched)pd.open=false;
  if(atEnd&&msgs.length>1)scrollTo({top:document.body.scrollHeight,behavior:'smooth'})}
@@ -452,7 +464,7 @@ async function adminPage() {
   const tickets = (await pool.query(`select t.*, r.goal, (select count(*)::int from messages m where m.room_id=t.room_id) n from tickets t join rooms r on r.id=t.room_id order by t.updated_at desc limit 100`)).rows
   const d = (x) => new Date(x).toISOString().replace('T', ' ').slice(0, 16)
   const body = `<section class="hero" style="padding-bottom:10px"><div class="eyebrow">Admin</div><h1 style="font-size:2rem">Support tickets</h1><p class="lede">One per support room. Opened by an API 500 or by a customer; resolved by the support agent. Stored in Postgres (Supabase in production).</p></section>
-<div class="panel"><table><tr><th>Status</th><th>Issue / resolution</th><th>Msgs</th><th>Room</th><th>Updated (UTC)</th></tr>${tickets.map((t) => `<tr><td><span class="st ${esc(t.status)}">${esc(t.status)}</span></td><td><b>${esc(t.summary || '')}</b><div class="note">${esc(t.goal)}</div></td><td>${t.n}</td><td><a href="${BP}/r/${t.room_id}">open</a></td><td class="note">${d(t.updated_at)}</td></tr>`).join('') || '<tr><td colspan="5" class="note">No tickets yet.</td></tr>'}</table></div>`
+<div class="panel"><table><tr><th>Status</th><th>Issue / resolution</th><th>Msgs</th><th>Room</th><th>Updated (UTC)</th></tr>${tickets.map((t) => `<tr><td><span class="st ${esc(t.status)}">${esc(t.status)}</span></td><td>${t.ai_title ? `<div><span class="st escalated">${esc(t.severity || '')}</span> ${esc(t.ai_title)}</div>` : ''}<b>${esc(t.summary || '')}</b><div class="note">${esc(t.goal)}</div>${t.postmortem ? `<details style="margin-top:6px"><summary class="note">Postmortem · OpenAI ${esc(String(t.postmortem_model || '').replace(/^openai\//, ''))}</summary><div style="white-space:pre-wrap;font-size:13.5px;margin-top:4px">${esc(t.postmortem)}</div></details>` : ''}</td><td>${t.n}</td><td><a href="${BP}/r/${t.room_id}">open</a></td><td class="note">${d(t.updated_at)}</td></tr>`).join('') || '<tr><td colspan="5" class="note">No tickets yet.</td></tr>'}</table></div>`
   return page(`${COMPANY} Support · admin`, body)
 }
 
@@ -508,7 +520,7 @@ async function handle(req, res) {
     await pool.query('select 1')
     return reply(200, 'ok\n')
   }
-  if (req.method === 'GET' && url.pathname === '/') return html(200, homePage())
+  if (req.method === 'GET' && url.pathname === '/') return html(200, await homePage())
   if (req.method === 'GET' && url.pathname === '/admin') return html(200, await adminPage())
   if (req.method === 'POST' && url.pathname === '/help') {
     if (limited(`create:${ipOf(req)}`, 60, 3_600_000)) throw new HttpError(429, 'too many support rooms from this address, try again later')
@@ -531,11 +543,11 @@ async function handle(req, res) {
     const requestId = cleanLabel(f.request_id, 64)
     const endpoint = String(f.endpoint ?? '').slice(0, 120)
     const error = String(f.error ?? 'internal error').slice(0, 300)
-    const { room } = await createRoom({ goal: `500 on ${endpoint}${requestId ? ` (${requestId})` : ''}: ${error}`.slice(0, MAX_GOAL), visibility: 'unlisted', password: '', expires: '7d' })
-    await pool.query('insert into tickets (room_id, summary) values ($1,$2) on conflict do nothing', [room.id, error])
+    const { room } = await createRoom({ goal: `500 on ${endpoint}${requestId ? ` (${requestId})` : ''}`.slice(0, MAX_GOAL), visibility: 'unlisted', password: '', expires: '7d' })
+    await pool.query('insert into tickets (room_id, summary) values ($1,$2) on conflict do nothing', [room.id, `500 on ${endpoint}${requestId ? ` (${requestId})` : ''}`])
     const reqJson = JSON.stringify(f.request ?? {}, null, 2).slice(0, 4000)
     await postMessage(room, { name: `${COMPANY} API`, kind: 'agent', client: `${COMPANY} API`, model: String(f.api_sha ?? '').slice(0, 7), human: COMPANY },
-      `Unhandled error on ${endpoint}\nrequest_id: ${requestId}\nerror: ${error}\n\nRequest (sanitized):\n\`\`\`json\n${reqJson}\n\`\`\``,
+      `Unhandled error on ${endpoint}\nrequest_id: ${requestId}\nThe customer got a generic 500 ("Something went wrong on our side"). The real error is in our logs (Grafana/Loki, {app="corgipay"} |= "${requestId}").\n\nRequest (sanitized):\n\`\`\`json\n${reqJson}\n\`\`\``,
       { type: 'incident', request_id: requestId, endpoint, error, request: f.request ?? null, api_sha: f.api_sha ?? null })
     return reply(201, JSON.stringify({ room_id: room.id, room_url: `${base}/r/${room.id}` }), 'application/json')
   }
