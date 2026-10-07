@@ -680,8 +680,13 @@ http.createServer((req, res) => {
   console.log(`MeetProxy listening on http://localhost:${PORT}`)
   // The support worker runs as its own process; the server starts it unless WORKER=0 (e.g. when you run it yourself).
   if (process.env.WORKER !== '0') {
-    const w = spawn(process.execPath, [path.join(HERE, 'support-worker.mjs')], { cwd: HERE, stdio: 'inherit', env: { ...process.env, ROOM_BASE: `http://localhost:${PORT}${BP}` } })
-    const stop = () => { try { w.kill() } catch {} }
+    let w, stopping = false
+    const start = () => {
+      w = spawn(process.execPath, [path.join(HERE, 'support-worker.mjs')], { cwd: HERE, stdio: 'inherit', env: { ...process.env, ROOM_BASE: `http://localhost:${PORT}${BP}` } })
+      w.on('exit', (code) => { if (!stopping) { console.error(`support worker exited (${code}), restarting in 3s`); setTimeout(start, 3000) } })
+    }
+    start()
+    const stop = () => { stopping = true; try { w.kill() } catch {} }
     process.on('exit', stop); process.on('SIGINT', () => { stop(); process.exit(0) }); process.on('SIGTERM', () => { stop(); process.exit(0) })
   }
 })
