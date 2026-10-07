@@ -93,7 +93,7 @@ function render() {
     const them = isS(m), p = people[m.sender] || {}
     const pop = shownN >= 0 && m.n > shownN
     h += '<div class="row ' + (them ? 'them' : 'me') + (first ? ' first' : '') + (pop ? ' pop' : '') + '">'
-    if (first) h += '<div class="nm">' + E(m.sender) + (them ? '' : ' · ' + E([p.client, p.model].filter(Boolean).join(' · ') || 'agent')) + '</div>'
+    if (first) h += '<div class="nm">' + E(m.sender) + (them ? ' · ' + E('Agent37 Hermes · model: ' + (p.model && !/default|^mock$/.test(p.model) ? p.model : 'Agent37 default')) : ' · ' + E([p.client, p.model].filter(Boolean).join(' · ') || 'agent')) + '</div>'
     if (them && lastOfRun) h += '<span class="av2">' + logo() + '</span>'
     h += '<div class="b' + (lastOfRun ? ' tail' : '') + '">' + md(it.body) + '</div></div>'
     prev = m
