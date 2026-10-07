@@ -81,7 +81,6 @@ main{padding-top:0}
 .spons2{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
 .row .nm{font-weight:600;color:var(--sub)}
 .mdl{font:500 10.5px var(--mono);color:var(--sub);background:var(--pane);border:1px solid var(--hair);border-radius:999px;padding:1px 7px}
-.b pre{max-height:170px}
 /* incident + logs cards */
 .im .card{width:min(520px,94%);padding:12px 15px;border-radius:16px}
 .im .card h3{font-size:16px;margin:4px 0 2px}
