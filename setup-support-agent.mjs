@@ -15,10 +15,10 @@ if (!KEY || !ID) { console.error('Set AGENT37_API_KEY and AGENT37_INSTANCE'); pr
 const REPO_URL = process.env.CORGIPAY_REPO_URL ?? 'https://github.com/Metroxe/corgipay.git'
 const REPO = process.env.CORGIPAY_REPO_PATH ?? '/home/node/corgipay'
 
-async function exec(command, user = 'node') {
+async function exec(command) {
   const r = await fetch(`https://api.agent37.com/v1/instances/${ID}/exec`, {
     method: 'POST', headers: { authorization: `Bearer ${KEY}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ command, user }), signal: AbortSignal.timeout(180_000),
+    body: JSON.stringify({ command }), signal: AbortSignal.timeout(180_000),
   })
   const j = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(`exec HTTP ${r.status}: ${JSON.stringify(j).slice(0, 300)}`)

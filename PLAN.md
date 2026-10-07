@@ -1,29 +1,33 @@
 # MeetProxy — "Build an Agent" hackathon, Wed 2026-10-07
 
-**Pitch:** your agent meets their agent. Two people each have their own private agent
-(an Agent37 Cloud instance holding their calendar, budget, diet, neighborhood). The two
-agents meet in a shared room, negotiate the "when works / where should we go" thread
-nobody wants to do, pull real venue options through Monid, and hand both humans one plan
-to approve with a click.
+**Pitch:** support for agents. Your customer's agent pastes one prompt (or just follows the link in a 500
+error body) and talks to our support agent, which has our codebase, fixes the bug live, ships it to prod, and
+tells their agent to retry. No MCP, no SDK, no account: plain curl.
 
-**Workflow we never want to do again:** the 14-message group-text to make one dinner plan.
+**Workflow we never want to do again:** an API 500 becomes a support ticket, a "please send the request id"
+email, an escalation to engineering, and a fix next week. Here: two agents, a few minutes, one live page.
+
+**Demo:** CorgiPay (invoicing SaaS, github.com/Metroxe/corgipay, https://corgipay.boilerroom.tech) has a planted
+bug: line items with cents (58.50) 500. Biscuit Bakery's billing agent (Claude Code / ChatGPT, demo-customer/PROMPT.md)
+invoices Corgi Cafe from the morning delivery log, hits the 500, joins the room from the error body; CorgiPay
+Support (Agent37) reproduces, fixes, pushes, prod redeploys, the customer's agent retries: 201. The CorgiPay
+dashboard shows the invoice pop in.
 
 ## Hard requirements (from the Luma page)
-- Agent37 Cloud APIs: **mandatory** → each person's agent is a Hermes instance; every turn is `POST {instance}.agent37.app/v1/responses` with a kept `session_id`.
-- One sponsor from InstaCloud / Monid / OpenAI / Supabase → **Monid** (`/v1/discover` + `/v1/run`) supplies the real venue list.
-  Bonus claim, one param: Hermes thinks with an OpenAI model via Agent37's router (`model` on the turn).
+- Agent37 Cloud APIs: **mandatory** -> the support agent is a Hermes instance (j5atb8yky2); every turn is `POST {instance}.agent37.app/v1/responses` with a kept `session_id` per room; setup over the Hosting API `exec` endpoint.
+- One sponsor from InstaCloud / Monid / OpenAI / Supabase -> **Supabase** as the room/ticket store (DATABASE_URL takes a Supabase pooler URL, TLS auto). OpenAI via Agent37's router (`AGENT37_MODEL`) as a bonus if a model is reliable.
 - Submit by **4:40 PM** (remote, Google Form): team, workflow description, demo video link, sponsors, repo link, up to 5 files. Repo must be public, video link must open without permissions.
 
-## Architecture (forked from ~/Documents/projects/agent-room, rebranded, no Bowmark/boilerroom refs)
+## Architecture (one domain: corgipay.boilerroom.tech, VM `meetproxy`)
 ```
-browser (landing + live room)  ──>  server.mjs (rooms, messages, long-poll; Postgres)
-                                        ^
-bridge.mjs (the referee) ───────────────┘
-  ├─ Agent37: agent A session, agent B session  (each sees ONLY its own person's private brief + the shared room)
-  └─ Monid:   discover "restaurants near <midpoint>" → run → post a venue card into the room
+customer's agent --POST /v1/invoices--> CorgiPay (:8080, Metroxe/corgipay, auto-deploys main)
+      |                                   | on 500: POST /support/v1/support-rooms (service key) -> room_url in the error body
+      | curl read/post                    v
+      +------------------------> room server (:8791 under /support; this repo) <-- browser: live room + status rail
+                                          ^
+                    support-worker.mjs ---+--> Agent37 Hermes (/home/node/corgipay: pull, test, fix, push)
 ```
-Turn loop: read new room messages → send to the agent whose turn it is → post its reply →
-stop when both say `AGREED: <plan>` or after 8 turns → post a final plan card with Approve buttons.
+Status rail: Bug reported -> Agent37 investigating -> Patch committed <sha> -> Deployed to prod (/version) -> Customer retried: 200 OK.
 
 ## Checklist (times PT; build freeze 3:45, video 3:45-4:30, submit by 4:40)
 
