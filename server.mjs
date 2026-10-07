@@ -406,7 +406,7 @@ async function homePage() {
 }
 
 const GRAFANA_EXPLORE = process.env.GRAFANA_EXPLORE ?? 'https://logs.boilerroom.tech/explore?schemaVersion=1&orgId=1&panes=%7B%22a%22%3A%7B%22datasource%22%3A%22corgipay-loki%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22expr%22%3A%22%7Bapp%3D%5C%22corgipay%5C%22%7D%20%7C%3D%20%5C%22REQ_ID%5C%22%20%7C%20json%22%2C%22queryType%22%3A%22range%22%2C%22datasource%22%3A%7B%22type%22%3A%22loki%22%2C%22uid%22%3A%22corgipay-loki%22%7D%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-6h%22%2C%22to%22%3A%22now%22%7D%7D%7D'
-const STATIC = { '/room.js': 'text/javascript', '/room.css': 'text/css', '/brand/agent37-logo.png': 'image/png', '/brand/agent37-favicon.ico': 'image/x-icon' }
+const STATIC = { '/room.js': 'text/javascript', '/room.css': 'text/css', '/brand/agent37-logo.png': 'image/png', '/brand/agent37-favicon.ico': 'image/x-icon', '/brand/woofwoof-mark.svg': 'image/svg+xml' }
 
 async function roomPage(req, room, key) {
   const [rows, people, ticket, typing] = await Promise.all([readMessages(room.id, 0), readPeople(room.id),
