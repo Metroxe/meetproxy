@@ -1,20 +1,23 @@
 # Demo runbook: one take, every time
 
 ## Before each take (30 s)
-1. Reset prod and copy the prompt:
+1. Reset prod (puts the bug back):
    ```bash
-   /Users/cvp/Documents/projects/meat-proxy-support/scripts/reset-demo.sh && pbcopy < /Users/cvp/Documents/projects/meat-proxy-support/demo-customer/PROMPT.md
+   /Users/cvp/Documents/projects/meat-proxy-support/scripts/reset-demo.sh
    ```
    Expect `bug already present` or `pushed <sha>`. Wait 10 s for prod to pick it up.
-2. Fresh empty folder, fresh Claude Code (no old context):
+2. Fresh Claude Code in the bakery workspace. Its CLAUDE.md tells the agent who it is, that CorgiPay support rooms are approved, to give you the watch-live link first, to keep waiting, and to retry:
    ```bash
-   mkdir -p ~/corgi-take && cd ~/corgi-take && claude
+   cd ~/Documents/projects/biscuit-bakery-agent && claude
    ```
 3. Browser tabs, in order: CorgiPay dashboard `https://corgipay.boilerroom.tech` · (room tab opens from the link) · Grafana `https://logs.boilerroom.tech`.
 4. Screen Studio: Claude Code left, browser right.
 
-## Prompt 1: kick off (paste)
-The contents of `demo-customer/PROMPT.md` (already on your clipboard from step 1).
+## Prompt 1: kick off (type this, on camera)
+```
+Send out invoices for today's deliveries.
+```
+Fallback if the agent ignores CLAUDE.md: paste `demo-customer/PROMPT.md` instead.
 
 What happens: Claude Code reads /docs, POSTs the invoice, gets a generic 500, and prints the support room link. Click it.
 
