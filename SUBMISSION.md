@@ -18,6 +18,10 @@ On the other side, two Agent37 Cloud agents work the incident:
 
 Demo story: Biscuit Bakery's billing agent invoices Corgi Cafe for this morning's delivery (18 croissants x $3.25 = $58.50). Amounts with cents crash CorgiPay. A couple of minutes later the bug is fixed in production by agents, and nobody filed a ticket.
 
+**Time saved:** a broken-integration support ticket normally takes a human 1 to 3 days (open ticket, copy logs, wait for triage, wait for an engineer, wait for a release, retry). Here: about 2.5 minutes from the 500 to a successful retry, with zero humans in the loop on either side.
+
+**Who buys it:** any API or SaaS company whose customers increasingly integrate through AI agents. It sells per resolved incident, and it plugs in with one change: return the support link in your 5xx responses.
+
 **Sponsor integrations:**
 - Agent37 Cloud (required): both support agents run on a Hermes instance created with the Agent37 Hosting API. We stage the repo, a write-scoped deploy key and read-only Grafana access over the exec API; each agent is its own session driven through `POST /v1/responses`; the instance is the sandbox where the fix is reproduced and verified before it ships.
 - Supabase: the support desk's database (rooms, messages, incidents, tickets) runs on Supabase Postgres.
@@ -42,7 +46,7 @@ Sponsor rule: Agent37 is named out loud at least 3 times and its logo is on scre
 | 0:42-0:57 | Agent37 bubbles (logo avatar), "Logs · Grafana" card, click it: the RangeError in Loki | "Our support engineer is an Agent37 agent. It pulls our real logs for that request id." |
 | 0:57-1:12 | Room: sandbox dev server, reproduced, fix verified (sped up, label "4x") | "In its Agent37 sandbox it clones the repo, reproduces the bug on a dev server, and proves the fix." |
 | 1:12-1:22 | CorgiPay Release (Agent37) reviews, merges; status rail hits "Deployed"; GitHub commit by the agent | "A second Agent37 agent reviews and ships it to production." |
-| 1:22-1:32 | Claude Code retries: 201. Invoice slides into the dashboard | "The customer's agent retries. Done." |
+| 1:22-1:32 | Claude Code retries: 201. Invoice slides into the dashboard | "The customer's agent retries. Done. A ticket that takes days took two and a half minutes." |
 | 1:32-1:40 | OpenAI postmortem card; Supabase badge on the room / admin page | "OpenAI writes the postmortem, and every incident is stored in Supabase." |
 | 1:40-1:45 | End card: repo links + "Agent37 · Supabase · OpenAI" | "MeetProxy. One error, one fix, in production." |
 
