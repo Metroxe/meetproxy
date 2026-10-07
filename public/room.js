@@ -52,22 +52,26 @@ function header() {
   const cust = Object.values(people).find((p) => !isS({ sender: p.name }) && p.name !== D.api && !/ Logs$/.test(p.name) && p.kind === 'agent')
   const rel = msgs.some((m) => m.sender === D.release)
   document.getElementById('avs').innerHTML = (cust ? ini(cust.name) : '') + logo() + (rel ? logo() : '')
-  document.getElementById('who').innerHTML = (cust ? E(cust.name) + ' <span style="color:var(--sub);font-weight:500">' + E([cust.client, cust.model].filter(Boolean).join(' · ')) + '</span> ⇄ ' : '') + E(D.support) + (rel ? ' + ' + E(D.release) : '') +
-    ' <span class="powered"><img src="' + LOGO + '" alt="">Powered by Agent37</span>' +
-    ' <span class="powered supa"><svg viewBox="0 0 109 113" width="14" height="14" aria-hidden="true"><path d="M63.7 110.3c-2.9 3.6-8.7 1.6-8.8-3l-1-67.3h45.4c8.2 0 12.8 9.5 7.7 15.9z" fill="#249361"/><path d="M45.3 2.1c2.9-3.6 8.7-1.6 8.8 3l.4 67.3H9.8c-8.2 0-12.8-9.5-7.7-15.9z" fill="#3ECF8E"/></svg>Data on Supabase</span>' +
-    ' <span class="powered"><span style="font-weight:700">&#9711;</span> Postmortems by OpenAI</span>'
+  const short = (n) => String(n || '').replace(/ \(Agent37\)$/, '')
+  document.getElementById('who').innerHTML = '<div class="nmline">' + (cust ? E(cust.name) + ' <span class="sw">⇄</span> ' : '') + E(short(D.support)) + (rel ? ' <span class="sw">+</span> ' + E(short(D.release)) : '') + '</div><div class="spons2">' +
+    '<span class="powered"><img src="' + LOGO + '" alt="">Powered by Agent37</span>' +
+    '<span class="powered supa"><svg viewBox="0 0 109 113" width="14" height="14" aria-hidden="true"><path d="M63.7 110.3c-2.9 3.6-8.7 1.6-8.8-3l-1-67.3h45.4c8.2 0 12.8 9.5 7.7 15.9z" fill="#249361"/><path d="M45.3 2.1c2.9-3.6 8.7-1.6 8.8 3l.4 67.3H9.8c-8.2 0-12.8-9.5-7.7-15.9z" fill="#3ECF8E"/></svg>Data on Supabase</span>' +
+    '<span class="powered"><span style="font-weight:700">&#9711;</span> Postmortems by OpenAI</span></div>'
   const t = ticket || { status: 'open', summary: '' }
   document.getElementById('banner').innerHTML = t.status === 'open' ? '' : '<div class="banner ' + E(t.status) + '"><span class="tag">Chat ' + E(t.status) + '</span>' + (t.status === 'resolved' ? '✓ ' + E(t.summary) : 'Escalated to a human: ' + E(t.summary)) + '</div>'
 }
 
+const ACT = { investigating: ['LOOK', 'Investigating'], logs: ['LOGS', 'Found it in the logs'], reproduced: ['TEST', 'Bug reproduced in a sandbox'], verified: ['DEV', 'Fix works on the dev server'], patch: ['PR', 'Patch ready'], review: ['REVIEW', 'Release approved'], deployed: ['PROD', 'Deployed to production'], retried: ['200', 'Customer retried: 200 OK'] }
+const LIVE = { logs: ['LOGS', 'Searching the logs'], reproduced: ['TEST', 'Testing in a sandbox'], verified: ['DEV', 'Fixing it on the dev server'], review: ['REVIEW', 'Release review'], deployed: ['PROD', 'Deploying to production'], retried: ['RETRY', 'Retrying the request'] }
+const tile = (tag) => '<span class="tile t-' + tag.toLowerCase() + '">' + ({ LOGS: '<i class="mag"></i>', TEST: '<i class="flask"></i><i class="bub"></i><i class="bub"></i>', DEV: '<i class="term">&gt;_</i>', REVIEW: '<i class="chk"></i>', PROD: '<i class="rkt">🚀</i>', RETRY: '<i class="spin"></i>', '200': '✓', PR: '⎇', LOOK: '<i class="mag"></i>' })[tag] + '</span>'
 const ICON = { investigating: '🔎', logs: '▤', reproduced: '✗', verified: '✓', patch: '⎇', review: '⎇', deployed: '🚀', retried: '✓' }
 function sysCard(m, pop) {
   const x = m.meta || {}; const P = pop ? ' pop' : ''
-  if (x.type === 'incident') return '<div class="card incident' + P + '"><div class="kick">● ' + E(D.api) + ' · HTTP 500 · ' + E(x.request_id) + '</div><h3>' + E(x.endpoint) + ': Something went wrong on our side</h3><div class="note" style="margin-top:2px">The customer\'s agent only saw a generic 500 and this support link. The real error is in our logs.</div>' + (x.request ? md('```request (sanitized)\n' + JSON.stringify(x.request, null, 2) + '\n```') : '') + '</div>'
-  if (x.type === 'logs') return '<div class="card logs' + P + '"><div class="kick">▤ Logs · Grafana</div><h3>Every request is logged to Loki. Query for <code>' + E(x.request_id) + '</code></h3><div class="note" style="margin-top:0"><code>{app="corgipay"} |= "' + E(x.request_id) + '"</code></div><a class="go" href="' + E(x.url) + '" target="_blank" rel="noopener">Open in Grafana Explore ↗</a></div>'
-  if (x.type === 'status') return '<div class="sysp k-' + E(x.stage) + P + '"><span class="ic">' + (ICON[x.stage] || '•') + '</span>' + E(m.body) + (/^https?:/.test(x.detail || '') ? ' · ' + link(E(x.detail)) : '') + '<span style="font-weight:500;opacity:.7">· ' + tm(m.created_at) + '</span></div>'
+  if (x.type === 'incident') return '<div class="card incident' + P + '"><div class="kick"><span class="pulse"></span>' + E(D.api) + ' · HTTP 500</div><h3>' + E(x.endpoint) + ' failed</h3>' + (x.request ? '<details class="req"><summary>Request <code>' + E(x.request_id) + '</code></summary>' + md('```\n' + JSON.stringify(x.request, null, 2) + '\n```') + '</details>' : '<code>' + E(x.request_id) + '</code>') + '</div>'
+  if (x.type === 'logs') return '<div class="card logs' + P + '"><div class="lrow">' + tile('LOGS') + '<div class="lt"><b>Every request is in Grafana</b><code>' + E(x.request_id) + '</code></div><a class="go" href="' + E(x.url) + '" target="_blank" rel="noopener">Open in Grafana ↗</a></div></div>'
+  if (x.type === 'status') { const a = ACT[x.stage] || ['•', m.body]; return '<div class="act s-' + E(x.stage) + P + '" title="' + E(m.body) + '">' + tile(a[0]) + '<span class="tg">' + E(a[0]) + '</span><span class="al">' + E(a[1]) + '</span>' + (/^https?:/.test(x.detail || '') ? '<a href="' + E(x.detail) + '" target="_blank" rel="noopener">Grafana ↗</a>' : '') + '<span class="tm">' + tm(m.created_at) + '</span></div>' }
   if (x.type === 'ticket') return '<div class="card ticket ' + E(x.status) + P + '"><div class="kick">' + (x.status === 'resolved' ? '✓ Chat resolved' : '⚑ Escalated to a human') + '</div><h3>' + E(x.summary) + '</h3></div>'
-  if (x.type === 'ai') return '<div class="card ai' + P + '"><div class="kick">◆ ' + (x.kind === 'postmortem' ? 'Postmortem' : 'Incident summary') + ' · OpenAI ' + E(String(x.model || '').replace(/^openai\//, '')) + '</div>' + (x.kind === 'postmortem' ? '<div class="pm">' + E(m.body) + '</div>' : '<h3><span class="sev">' + E(x.severity) + '</span>' + E(x.title) + '</h3>' + (x.why ? '<div class="note">' + E(x.why) + '</div>' : '')) + '</div>'
+  if (x.type === 'ai') return '<div class="card ai' + P + '"><div class="kick">◆ ' + (x.kind === 'postmortem' ? 'Postmortem' : 'Incident summary') + ' · OpenAI ' + E(String(x.model || '').replace(/^openai\//, '')) + '</div>' + (x.kind === 'postmortem' ? '<div class="pm">' + E(m.body) + '</div>' : '<h3 title="' + E(x.why || '') + '"><span class="sev">' + E(x.severity) + '</span>' + E(x.title) + '</h3>') + '</div>'
   if (m.sender_kind === 'human') return '<div class="sysp' + P + '"><b>' + E(m.sender) + '</b>: ' + E(m.body) + '</div>'
   return null
 }
@@ -93,16 +97,26 @@ function render() {
     const them = isS(m), p = people[m.sender] || {}
     const pop = shownN >= 0 && m.n > shownN
     h += '<div class="row ' + (them ? 'them' : 'me') + (first ? ' first' : '') + (pop ? ' pop' : '') + '">'
-    if (first) h += '<div class="nm">' + E(m.sender) + (them ? ' · ' + E('Agent37 Hermes · model: ' + (p.model && !/default|^mock$/.test(p.model) ? p.model : 'Agent37 default')) : ' · ' + E([p.client, p.model].filter(Boolean).join(' · ') || 'agent')) + '</div>'
+    if (first) h += '<div class="nm">' + E(String(m.sender).replace(/ \(Agent37\)$/, '')) + '<span class="mdl">' + (them ? E('Agent37 · ' + (p.model && !/default|^mock$/.test(p.model) ? p.model : 'Agent37 default')) : E([p.client, p.model].filter(Boolean).join(' · ') || 'agent')) + '</span></div>'
     if (them && lastOfRun) h += '<span class="av2">' + logo() + '</span>'
-    h += '<div class="b' + (lastOfRun ? ' tail' : '') + '">' + md(it.body) + '</div></div>'
+    h += '<div class="b' + (lastOfRun ? ' tail' : '') + (it.body.length > 240 ? ' long" onclick="this.classList.toggle(\'open\')' : '') + '">' + md(it.body) + '</div></div>'
     prev = m
   }
   const cur = rail()
   const tk = ticket || {}
-  if (typing && tk.status !== 'resolved') {
-    const sameRun = prev && prev.sender === typing
-    h += '<div class="row them typing2' + (sameRun ? '' : ' first') + '">' + (sameRun ? '' : '<div class="nm">' + E(typing) + '</div>') + '<span class="av2">' + logo() + '</span><div class="b tail"><i></i><i></i><i></i></div></div>'
+  const done = ['resolved', 'escalated'].includes(tk.status)
+  const lastM = items.length ? items[items.length - 1].m : null
+  if (!done && msgs.length) {
+    const step = (STEPS[cur] || [])[0]
+    const supTurn = typing || !lastM || !isS(lastM) || step === 'deployed'
+    if (supTurn && step !== 'retried') {
+      const lv = LIVE[step] || ['LOOK', 'Looking into it']; const nmS = typing || D.support
+      const sameRun = prev && prev.sender === nmS
+      h += '<div class="row them live first"><div class="nm">' + E(String(nmS).replace(/ \(Agent37\)$/, '')) + '<span class="mdl">Agent37</span></div><span class="av2">' + logo() + '</span><div class="b tail lv t2-' + lv[0].toLowerCase() + '">' + tile(lv[0]) + '<span class="lvt"><span class="tg">' + lv[0] + '</span>' + lv[1] + '</span><span class="dots"><i></i><i></i><i></i></span><span class="bar"></span></div></div>'
+    } else {
+      const cust = Object.values(people).find((p) => !isS({ sender: p.name }) && p.name !== D.api && !/ Logs$/.test(p.name) && p.kind === 'agent')
+      h += '<div class="row me live first"><div class="nm">' + E(cust ? cust.name : 'Customer agent') + (step === 'retried' ? '<span class="mdl">retrying the request</span>' : '<span class="mdl">writing back</span>') + '</div><div class="b tail typ"><span class="dots"><i></i><i></i><i></i></span></div></div>'
+    }
   }
   const atEnd = innerHeight + scrollY >= document.body.scrollHeight - 220
   st.innerHTML = h; header()

@@ -73,3 +73,68 @@ main{padding-top:0}
 .side .rail li:not(:last-child):after{content:"";position:absolute;left:22px;top:calc(50% + 13px);bottom:calc(11px - 50%);width:2px;background:var(--line);border-radius:2px}
 .side .rail li.done:not(:last-child):after{background:var(--ok)}
 .side .rail li.now .l{color:var(--b)}
+/* ---- lean chat pass ---- */
+.chathd .goal,.side>.note{display:none}
+.chathd .who{flex-direction:column;gap:7px}
+.chathd .nmline{font:650 16px -apple-system,system-ui,sans-serif;letter-spacing:-.01em}
+.chathd .sw{color:var(--sub);font-weight:500;margin:0 2px}
+.spons2{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.row .nm{font-weight:600;color:var(--sub)}
+.mdl{font:500 10.5px var(--mono);color:var(--sub);background:var(--pane);border:1px solid var(--hair);border-radius:999px;padding:1px 7px}
+.b pre{max-height:170px}
+/* incident + logs cards */
+.im .card{width:min(520px,94%);padding:12px 15px;border-radius:16px}
+.im .card h3{font-size:16px;margin:4px 0 2px}
+.card .pulse{width:8px;height:8px;border-radius:50%;background:var(--bug);display:inline-block;animation:pz 1.3s infinite}
+@keyframes pz{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--bug) 60%,transparent)}100%{box-shadow:0 0 0 8px transparent}}
+details.req{margin-top:6px}details.req summary{cursor:pointer;font-size:12.5px;color:var(--sub);list-style:none}details.req summary::-webkit-details-marker{display:none}
+details.req summary:before{content:"▸ ";}details.req[open] summary:before{content:"▾ "}
+details.req pre{font:12px/1.45 var(--mono);background:var(--code);border-radius:10px;padding:8px 10px;max-height:180px;overflow:auto;margin:6px 0 0}
+.card.logs{padding:10px 12px}
+.lrow{display:flex;align-items:center;gap:12px}.lrow .lt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-size:14px}.lrow .lt code{font-size:11.5px;align-self:flex-start}
+.card.logs a.go{margin:0;white-space:nowrap}
+.card.ai .pm{display:-webkit-box;-webkit-line-clamp:7;-webkit-box-orient:vertical;overflow:hidden}
+/* activity chips (history) */
+.act{align-self:center;margin:10px 0 4px;display:inline-flex;align-items:center;gap:9px;font:600 13px -apple-system,system-ui,sans-serif;color:var(--grayfg);background:var(--imbg);border:1px solid var(--hair);border-radius:999px;padding:4px 14px 4px 4px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.act .tile{width:28px;height:28px;border-radius:50%}
+.act .tg{font:800 10px var(--mono);letter-spacing:.08em;color:var(--k);background:color-mix(in srgb,var(--k) 14%,transparent);border-radius:6px;padding:2px 6px}
+.act .tm{font-weight:500;color:var(--sub);font-size:11.5px}.act a{color:#f46800;text-decoration:none;font-size:12px}
+.act.pop{animation:fade .45s ease both}
+/* tiles: little animated graphics per stage */
+.tile{--k:var(--sub);width:34px;height:34px;border-radius:11px;flex:none;display:inline-flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:color-mix(in srgb,var(--k) 16%,transparent);color:var(--k);font:800 13px var(--mono)}
+.t-logs,.t-look,.s-logs,.s-investigating,.t2-logs{--k:#f46800}.t-test,.s-reproduced,.t2-test{--k:#af52de}.t-dev,.s-verified,.t2-dev{--k:#0a84ff}
+.t-review,.t-pr,.s-review,.s-patch,.t2-review{--k:#5e5ce6}.t-prod,.s-deployed,.t2-prod{--k:#ff9f0a}.t-200,.s-retried,.t-retry{--k:#30d158}
+.act{--k:var(--sub)}
+.mag{width:11px;height:11px;border:2.5px solid var(--k);border-radius:50%;position:relative;animation:scan 1.6s ease-in-out infinite}
+.mag:after{content:"";position:absolute;width:2.5px;height:7px;background:var(--k);right:-4px;bottom:-6px;transform:rotate(-45deg);border-radius:2px}
+@keyframes scan{0%,100%{transform:translate(-4px,-1px)}50%{transform:translate(3px,2px)}}
+.flask{width:14px;height:15px;background:var(--k);clip-path:polygon(35% 0,65% 0,65% 35%,100% 100%,0 100%,35% 35%);animation:wob 1.4s ease-in-out infinite;transform-origin:50% 90%}
+@keyframes wob{0%,100%{transform:rotate(-9deg)}50%{transform:rotate(9deg)}}
+.bub{position:absolute;width:4px;height:4px;border-radius:50%;background:var(--k);left:48%;bottom:50%;opacity:0;animation:rise 1.4s ease-in infinite}
+.bub+.bub{left:58%;animation-delay:.7s}
+@keyframes rise{0%{opacity:0;transform:translateY(0)}30%{opacity:1}100%{opacity:0;transform:translateY(-14px)}}
+.term{font:800 12px var(--mono);font-style:normal;color:var(--k)}
+.term:after{content:"";display:inline-block;width:2px;height:12px;background:var(--k);margin-left:1px;vertical-align:-2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.t-dev{background:color-mix(in srgb,#0b1220 85%,var(--k))}
+.chk{width:12px;height:7px;border-left:3px solid var(--k);border-bottom:3px solid var(--k);transform:rotate(-45deg) translate(1px,-1px);animation:pz2 1.4s ease-in-out infinite}
+@keyframes pz2{0%,100%{opacity:.4}50%{opacity:1}}
+.rkt{font-style:normal;font-size:15px;animation:lift 1.2s ease-in-out infinite}
+@keyframes lift{0%,100%{transform:translate(0,2px)}50%{transform:translate(1px,-3px)}}
+.spin{width:14px;height:14px;border:2.5px solid color-mix(in srgb,var(--k) 30%,transparent);border-top-color:var(--k);border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+/* live "working on it" bubble */
+.row.live{margin-top:14px}
+.row.live .b.lv{display:flex;align-items:center;gap:11px;padding:9px 16px 11px 9px;overflow:hidden}
+.lvt{display:flex;flex-direction:column;font-size:15px;font-weight:600;line-height:1.25}
+.lvt .tg{font:800 10px var(--mono);letter-spacing:.12em;color:var(--k)}
+.dots{display:inline-flex;gap:4px;margin-left:4px}.dots i{width:7px;height:7px;border-radius:50%;background:var(--sub);animation:dots 1.3s infinite}.dots i:nth-child(2){animation-delay:.18s}.dots i:nth-child(3){animation-delay:.36s}
+.row.me .dots i{background:rgba(255,255,255,.85)}
+.b.typ{padding:12px 15px}
+.b.lv .bar{position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(90deg,transparent,var(--k),transparent);background-size:50% 100%;background-repeat:no-repeat;animation:shim 1.5s linear infinite}
+@keyframes shim{from{background-position:-50% 0}to{background-position:150% 0}}
+.row.them .b.lv.tail:before,.row.them .b.lv.tail:after{display:none}
+.row.live .b.lv{border-bottom-left-radius:6px}
+.b.long{cursor:pointer;max-height:7.2em;overflow:hidden;-webkit-mask-image:linear-gradient(180deg,#000 55%,transparent);mask-image:linear-gradient(180deg,#000 55%,transparent)}
+.b.long.open{max-height:none;-webkit-mask-image:none;mask-image:none}
+.b.long.tail:before,.b.long.tail:after{display:none}
