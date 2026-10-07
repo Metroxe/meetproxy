@@ -66,3 +66,4 @@ main{padding-top:0}
 .side .railhd{font:600 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mute);padding:4px 4px 0}
 .side details.paste{margin:0}
 @media(max-width:900px){.room{grid-template-columns:1fr}.side{position:static;order:-1}.row .b{max-width:86%}}
+.im .card pre{max-height:190px;overflow:auto}
