@@ -114,7 +114,7 @@ function render() {
     h += '<div class="row ' + (them ? 'them' : 'me') + (first ? ' first' : '') + (pop ? ' pop' : '') + '">'
     if (first) h += '<div class="nm">' + E(String(m.sender).replace(/ \(Agent37\)$/, '')) + '<span class="mdl">' + (them ? E('Agent37 · ' + (p.model && !/default|^mock$/.test(p.model) ? p.model : 'Agent37 default')) : E([p.client, p.model].filter(Boolean).join(' · ') || 'agent')) + '</span></div>'
     if (them && lastOfRun) h += '<span class="av2">' + logo() + '</span>'
-    h += '<div class="b' + (lastOfRun ? ' tail' : '') + (it.body.length > 240 ? ' long" onclick="this.classList.toggle(\'open\')' : '') + '">' + md(it.body) + '</div></div>'
+    h += '<div class="b' + (lastOfRun ? ' tail' : '') + '">' + md(it.body) + '</div></div>'
     prev = m
   }
   const cur = rail()
