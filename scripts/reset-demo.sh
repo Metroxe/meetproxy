@@ -4,6 +4,7 @@
 # Only those two files are committed, so other in-progress edits in the clone are left alone.
 # Usage: scripts/reset-demo.sh [path-to-corgipay-clone]   (default ~/Documents/projects/corgipay)
 set -euo pipefail
+HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="${1:-$HOME/Documents/projects/corgipay}"
 BUGGY=f9cee57   # invoices.mjs with `return BigInt(amount) * 100n` in toCents()
 cd "$REPO"
@@ -25,8 +26,9 @@ else
   echo "pushed $(git rev-parse --short HEAD)"
 fi
 # Clean slate for the take: clear the dashboard's failed-request rows and close leftover support rooms.
-ssh meetproxy 'echo "[]" | sudo tee /opt/corgipay/data/incidents.json >/dev/null; sudo systemctl restart corgipay; set -a; . /opt/meetproxy/.env; set +a; psql "$DATABASE_URL" -qtAc "update rooms set closed=true where not closed" >/dev/null' \
-  && echo "cleared old API errors and closed old support rooms" || echo "WARNING: could not clear old errors (ssh meetproxy failed)"
+SEED_JSON="$(node "$HERE/seed-dashboard.mjs")"
+printf '%s' "$SEED_JSON" | ssh meetproxy 'sudo tee /opt/corgipay/data/invoices.json >/dev/null; echo "[]" | sudo tee /opt/corgipay/data/incidents.json >/dev/null; sudo systemctl restart corgipay; set -a; . /opt/meetproxy/.env; set +a; psql "$DATABASE_URL" -qtAc "update rooms set closed=true where not closed" >/dev/null' \
+  && echo "dashboard reset: 9 varied invoices, no API errors, old support rooms closed" || echo "WARNING: could not clear old errors (ssh meetproxy failed)"
 # Wait until prod is serving this commit.
 want=$(git rev-parse HEAD)
 for i in $(seq 1 20); do
