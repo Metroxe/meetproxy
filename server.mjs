@@ -386,22 +386,22 @@ table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;p
 @media(max-width:720px){.rail{grid-template-columns:1fr 1fr;position:static}.how{grid-template-columns:1fr 1fr}.msg{max-width:96%}}`
 
 const page = (title, inner, script = '') => `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="noindex"><style>${CSS}</style><body>
-<div class="top"><a class="logo" href="${BP}/"><i></i>${esc(COMPANY)} Support</a><span class="sp"></span><a class="pill" href="${BP}/admin">Tickets</a><span class="pill"><span class="dot"></span>Support agent online</span></div>
+<div class="top"><a class="logo" href="${BP}/"><i></i>${esc(COMPANY)} Support</a><span class="sp"></span><a class="pill" href="${BP}/admin">Chats</a><span class="pill"><span class="dot"></span>Support agent online</span></div>
 <main>${inner}</main>${script ? `<script>${script}</script>` : ''}</body></html>`
 
 async function homePage() {
   const recent = (await pool.query(`select t.room_id, t.status, t.summary, t.ai_title, t.severity, t.updated_at, r.goal from tickets t join rooms r on r.id=t.room_id order by t.created_at desc limit 8`).catch(() => ({ rows: [] }))).rows
   const ago = (d) => { const m = Math.round((Date.now() - new Date(d)) / 60000); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago` }
   const body = `<section class="hero"><div class="eyebrow">${esc(COMPANY)} API · support for agents</div>
-<h1>${esc(COMPANY)} Support</h1>
+<h1>${esc(COMPANY)} <em>Support</em></h1>
 <p class="lede">When your agent hits a ${esc(COMPANY)} error, it joins a room with our Agent37 support engineer, who fixes the bug in production while you watch.</p></section>
-<div class="panel"><b>Recent incidents</b> <span class="note">· <a href="${BP}/admin">open the ticket dashboard →</a></span>
+<div class="panel"><b>Recent incidents</b> <span class="note">· <a href="${BP}/admin">see all chats →</a></span>
 <ul class="inc">${recent.map((t) => `<li><span class="st ${esc(t.status)}">${esc(t.status)}</span><a href="${BP}/r/${t.room_id}">${t.severity ? `<b>${esc(t.severity)}</b> ` : ''}${esc(t.ai_title || t.summary || t.goal)}</a><span class="note">${ago(t.updated_at)}</span></li>`).join('') || '<li class="note">No incidents yet.</li>'}</ul></div>
 <form class="panel" method="post" action="${BP}/help" id="f"><b>What's going wrong?</b> <span class="note">(optional, one line)</span>
 <div class="ask"><input name="issue" maxlength="300" placeholder="e.g. POST /v1/charges returns 400 unsupported_api_version" autocomplete="off"><button class="btn" id="go">Get help →</button></div>
 <div class="note">You'll get a prompt to paste into your agent, and a live page to watch the two agents work.</div></form>
-<section class="how"><div><b>1 · Your agent hits a 500</b>The error body carries a support room link and one line telling the agent to join.</div><div><b>2 · It joins over curl</b>Posts the failing request. Or open a room yourself above and paste the prompt.</div><div><b>3 · Our agent fixes it</b>Agent37 support engineer reproduces, patches, tests, pushes, and waits for prod.</div><div><b>4 · Retry: 200 OK</b>Your agent retries and your task finishes. The ticket closes itself.</div></section>
-<div class="spons">Support agent: an Agent37 Cloud Hermes instance with the ${esc(COMPANY)} repo cloned · Incident summaries and postmortems: OpenAI gpt-5.4-mini via Agent37's model router · Rooms and tickets: Supabase Postgres</div>`
+<section class="how"><div><b>1 · Your agent hits a 500</b>The error body carries a support room link and one line telling the agent to join.</div><div><b>2 · It joins over curl</b>Posts the failing request. Or open a room yourself above and paste the prompt.</div><div><b>3 · Our agent fixes it</b>Agent37 support engineer reproduces, patches, tests, pushes, and waits for prod.</div><div><b>4 · Retry: 200 OK</b>Your agent retries and your task finishes. The chat closes itself.</div></section>
+<div class="spons">Support agent: an Agent37 Cloud Hermes instance with the ${esc(COMPANY)} repo cloned · Incident summaries and postmortems: OpenAI gpt-5.4-mini via Agent37's model router · Chats: Supabase Postgres</div>`
   return page(`${COMPANY} Support`, body, `f.addEventListener('submit',()=>{go.disabled=true;go.textContent='Opening a room…'})`)
 }
 
@@ -427,8 +427,8 @@ async function roomPage(req, room, key) {
 async function adminPage() {
   const tickets = (await pool.query(`select t.*, r.goal, (select count(*)::int from messages m where m.room_id=t.room_id) n from tickets t join rooms r on r.id=t.room_id order by t.updated_at desc limit 100`)).rows
   const d = (x) => new Date(x).toISOString().replace('T', ' ').slice(0, 16)
-  const body = `<section class="hero" style="padding-bottom:10px"><div class="eyebrow">Admin</div><h1 style="font-size:2rem">Support tickets</h1><p class="lede">One per support room. Opened by an API 500 or by a customer; resolved by the support agent. Stored in Postgres (Supabase in production).</p></section>
-<div class="panel"><table><tr><th>Status</th><th>Issue / resolution</th><th>Msgs</th><th>Room</th><th>Updated (UTC)</th></tr>${tickets.map((t) => `<tr><td><span class="st ${esc(t.status)}">${esc(t.status)}</span></td><td>${t.ai_title ? `<div><span class="st escalated">${esc(t.severity || '')}</span> ${esc(t.ai_title)}</div>` : ''}<b>${esc(t.summary || '')}</b><div class="note">${esc(t.goal)}</div>${t.postmortem ? `<details style="margin-top:6px"><summary class="note">Postmortem · OpenAI ${esc(String(t.postmortem_model || '').replace(/^openai\//, ''))}</summary><div style="white-space:pre-wrap;font-size:13.5px;margin-top:4px">${esc(t.postmortem)}</div></details>` : ''}</td><td>${t.n}</td><td><a href="${BP}/r/${t.room_id}">open</a></td><td class="note">${d(t.updated_at)}</td></tr>`).join('') || '<tr><td colspan="5" class="note">No tickets yet.</td></tr>'}</table></div>`
+  const body = `<section class="hero" style="padding-bottom:10px"><div class="eyebrow">Admin</div><h1 style="font-size:2rem">Support chats</h1><p class="lede">Every support chat, one per room. Opened by an API 500 or by a customer; resolved by the support agent. Stored in Postgres (Supabase in production).</p></section>
+<div class="panel"><table><tr><th>Status</th><th>Issue / resolution</th><th>Msgs</th><th>Room</th><th>Updated (UTC)</th></tr>${tickets.map((t) => `<tr><td><span class="st ${esc(t.status)}">${esc(t.status)}</span></td><td>${t.ai_title ? `<div><span class="st escalated">${esc(t.severity || '')}</span> ${esc(t.ai_title)}</div>` : ''}<b>${esc(t.summary || '')}</b><div class="note">${esc(t.goal)}</div>${t.postmortem ? `<details style="margin-top:6px"><summary class="note">Postmortem · OpenAI ${esc(String(t.postmortem_model || '').replace(/^openai\//, ''))}</summary><div style="white-space:pre-wrap;font-size:13.5px;margin-top:4px">${esc(t.postmortem)}</div></details>` : ''}</td><td>${t.n}</td><td><a href="${BP}/r/${t.room_id}">open</a></td><td class="note">${d(t.updated_at)}</td></tr>`).join('') || '<tr><td colspan="5" class="note">No chats yet.</td></tr>'}</table></div>`
   return page(`${COMPANY} Support · admin`, body)
 }
 

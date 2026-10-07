@@ -67,3 +67,9 @@ main{padding-top:0}
 .side details.paste{margin:0}
 @media(max-width:900px){.room{grid-template-columns:1fr}.side{position:static;order:-1}.row .b{max-width:86%}}
 .im .card pre{max-height:190px;overflow:auto}
+.chathd{padding:18px 20px 14px}.chathd .avs .logo37,.chathd .avs .ini{width:42px;height:42px;font-size:17px}
+.chathd .who{font-size:15px}
+.side .rail li{position:relative}.side .rail li .b{position:relative;z-index:1}
+.side .rail li:not(:last-child):after{content:"";position:absolute;left:22px;top:calc(50% + 13px);bottom:calc(11px - 50%);width:2px;background:var(--line);border-radius:2px}
+.side .rail li.done:not(:last-child):after{background:var(--ok)}
+.side .rail li.now .l{color:var(--b)}

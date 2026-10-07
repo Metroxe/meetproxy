@@ -57,7 +57,7 @@ function header() {
     ' <span class="powered supa"><svg viewBox="0 0 109 113" width="14" height="14" aria-hidden="true"><path d="M63.7 110.3c-2.9 3.6-8.7 1.6-8.8-3l-1-67.3h45.4c8.2 0 12.8 9.5 7.7 15.9z" fill="#249361"/><path d="M45.3 2.1c2.9-3.6 8.7-1.6 8.8 3l.4 67.3H9.8c-8.2 0-12.8-9.5-7.7-15.9z" fill="#3ECF8E"/></svg>Data on Supabase</span>' +
     ' <span class="powered"><span style="font-weight:700">&#9711;</span> Postmortems by OpenAI</span>'
   const t = ticket || { status: 'open', summary: '' }
-  document.getElementById('banner').innerHTML = t.status === 'open' ? '' : '<div class="banner ' + E(t.status) + '"><span class="tag">Ticket ' + E(t.status) + '</span>' + (t.status === 'resolved' ? '✓ ' + E(t.summary) : 'Escalated to a human: ' + E(t.summary)) + '</div>'
+  document.getElementById('banner').innerHTML = t.status === 'open' ? '' : '<div class="banner ' + E(t.status) + '"><span class="tag">Chat ' + E(t.status) + '</span>' + (t.status === 'resolved' ? '✓ ' + E(t.summary) : 'Escalated to a human: ' + E(t.summary)) + '</div>'
 }
 
 const ICON = { investigating: '🔎', logs: '▤', reproduced: '✗', verified: '✓', patch: '⎇', review: '⎇', deployed: '🚀', retried: '✓' }
@@ -66,7 +66,7 @@ function sysCard(m, pop) {
   if (x.type === 'incident') return '<div class="card incident' + P + '"><div class="kick">● ' + E(D.api) + ' · HTTP 500 · ' + E(x.request_id) + '</div><h3>' + E(x.endpoint) + ': Something went wrong on our side</h3><div class="note" style="margin-top:2px">The customer\'s agent only saw a generic 500 and this support link. The real error is in our logs.</div>' + (x.request ? md('```request (sanitized)\n' + JSON.stringify(x.request, null, 2) + '\n```') : '') + '</div>'
   if (x.type === 'logs') return '<div class="card logs' + P + '"><div class="kick">▤ Logs · Grafana</div><h3>Every request is logged to Loki. Query for <code>' + E(x.request_id) + '</code></h3><div class="note" style="margin-top:0"><code>{app="corgipay"} |= "' + E(x.request_id) + '"</code></div><a class="go" href="' + E(x.url) + '" target="_blank" rel="noopener">Open in Grafana Explore ↗</a></div>'
   if (x.type === 'status') return '<div class="sysp k-' + E(x.stage) + P + '"><span class="ic">' + (ICON[x.stage] || '•') + '</span>' + E(m.body) + (/^https?:/.test(x.detail || '') ? ' · ' + link(E(x.detail)) : '') + '<span style="font-weight:500;opacity:.7">· ' + tm(m.created_at) + '</span></div>'
-  if (x.type === 'ticket') return '<div class="card ticket ' + E(x.status) + P + '"><div class="kick">' + (x.status === 'resolved' ? '✓ Ticket resolved' : '⚑ Escalated to a human') + '</div><h3>' + E(x.summary) + '</h3></div>'
+  if (x.type === 'ticket') return '<div class="card ticket ' + E(x.status) + P + '"><div class="kick">' + (x.status === 'resolved' ? '✓ Chat resolved' : '⚑ Escalated to a human') + '</div><h3>' + E(x.summary) + '</h3></div>'
   if (x.type === 'ai') return '<div class="card ai' + P + '"><div class="kick">◆ ' + (x.kind === 'postmortem' ? 'Postmortem' : 'Incident summary') + ' · OpenAI ' + E(String(x.model || '').replace(/^openai\//, '')) + '</div>' + (x.kind === 'postmortem' ? '<div class="pm">' + E(m.body) + '</div>' : '<h3><span class="sev">' + E(x.severity) + '</span>' + E(x.title) + '</h3>' + (x.why ? '<div class="note">' + E(x.why) + '</div>' : '')) + '</div>'
   if (m.sender_kind === 'human') return '<div class="sysp' + P + '"><b>' + E(m.sender) + '</b>: ' + E(m.body) + '</div>'
   return null
