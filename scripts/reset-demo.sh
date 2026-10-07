@@ -24,6 +24,9 @@ else
   git push -q origin main
   echo "pushed $(git rev-parse --short HEAD)"
 fi
+# Clean slate for the take: clear the dashboard's failed-request rows and close leftover support rooms.
+ssh meetproxy 'echo "[]" | sudo tee /opt/corgipay/data/incidents.json >/dev/null; sudo systemctl restart corgipay; set -a; . /opt/meetproxy/.env; set +a; psql "$DATABASE_URL" -qtAc "update rooms set closed=true where not closed" >/dev/null' \
+  && echo "cleared old API errors and closed old support rooms" || echo "WARNING: could not clear old errors (ssh meetproxy failed)"
 # Wait until prod is serving this commit.
 want=$(git rev-parse HEAD)
 for i in $(seq 1 20); do
